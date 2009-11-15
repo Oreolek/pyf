@@ -39,19 +39,21 @@ words = (
 	Verb('cut'),
 	Touch('dig'),
 	Touch('fill'),
-	Touch('kiss'),
 	Verb('listen', 'listen to'),
 	Touch('sit down on', 'sit down', 'sit'),
 	Touch('lie down on', 'lie down'),
+
+	SocialTouch('kiss'),
+	SocialTouch('hug'),
 	
 	Attack('hit', 'punch'),
 	Attack('kick'),
 	Attack('assault', 'attack'),
 	Attack('break'),
 
-	Answer('yes'),
-	Answer('no'),
-	Answer('sorry'),
+	Answer('agree to', 'yes'),
+	Answer('disagree to','no'),
+	Answer('apologize for', 'apologize', 'sorry'),
 
 	Verb('pray'),
 	Verb('think'),
@@ -59,7 +61,7 @@ words = (
 	Verb('wake up'),
 	Verb('wave'),
 
-	Social('talk', 'talk to', 'speak to', 'speak with', 'speak'),
+	Social('talk to', 'talk', 'speak to', 'speak with', 'speak'),
 	Social('answer', 'reply'),
 	Social('show'),
 
@@ -80,7 +82,7 @@ words = (
 	Touch('taste'),
 	Touch('turn on'),
 	Touch('turn off'),
-	Touch('turn'),
+	Move('turn', 'twist', 'move'),
 	Touch('touch', 'rub', 'feel'),
 	Touch('wake'),
 
@@ -108,7 +110,6 @@ words = (
 	Preposition('next to'),
 	Preposition('to'),
 	Preposition('inside'),
-	Preposition('under'),
 	Preposition('through'),
 	Preposition('beside'),
 

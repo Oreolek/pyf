@@ -34,6 +34,9 @@ class HandlerException(Exception):
 
 class MatchingError(Exception):
 	pass
+	
+class MoveError(Exception):
+	pass
 
 class AmbiguityError(Exception):
 	def __init__(self, words, sentence, matches):
@@ -49,4 +52,7 @@ class GameError(Exception):
 	pass
 	
 class ScriptClassError(Exception):
+	pass
+	
+class SkipHandle(Exception):
 	pass

@@ -25,13 +25,11 @@ class XMLScriptNode:
 	def __init__(self, node, dict):
 		self.node = node
 		self.dict = dict
-		self.node.normalize()
 		self.children = []
+		self.node.normalize()
 		for node in self.node.childNodes:
-			try:
+			if node.__class__ == minidom.Element:
 				self.children.append(XMLScriptNode(node, dict))
-			except TypeError:
-				pass
 		
 	def getChild(self, name):
 		e = self.node.getElementsByTagName(name)
@@ -48,26 +46,35 @@ class XMLScriptNode:
 				l.append(o)
 				l.extend(child.createChildren(o))
 				if root:
-					o.move(root)
+					try:
+						o.move(root)
+					except MoveError:
+						o = root.getProp(o.name)
+						o.XMLSetup(child)
 				o.XMLWrapup(child)
 
 		return l
 
 	def create(self):
-		node = self.node
 		try:
 			cls = self.getClass()
-			o = cls()
-			if self.node.hasAttribute('as'):
-				self.safe[self.node.getAttribute('as')] = o
-			try:
-				o.XMLSetup(self)
-			except AttributeError:
-				pass
-			return o
 		except ScriptClassError:
-			pass
+			return
 			
+		try:
+			o = cls()
+		except TypeError:
+			cls.XMLSetup(self)
+			return cls
+
+		if self.node.hasAttribute('as'):
+			self.safe[self.node.getAttribute('as')] = o
+		try:
+			o.XMLSetup(self)
+		except AttributeError:
+			pass
+		return o
+		
 	def elementName(self):
 		return self.node.tagName.rsplit(':')[-1]
 			
@@ -85,10 +92,11 @@ class XMLScriptNode:
 	def getValue(self):
 		s = ''
 		for child in self.node.childNodes:
-			if child.__class__ != minidom.Text:
+			try:
+				s += child.nodeValue.strip()
+			except AttributeError:
 				f = XMLScriptNode(child, self.dict).getClass()
 				return f
-			s += child.nodeValue.strip()
 
 		if self.node.getAttribute('type') != '':
 			return eval('%s(%s)' % (self.node.getAttribute('type'), s))

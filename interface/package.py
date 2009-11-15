@@ -49,8 +49,8 @@ class Packer:
 	def pack(cls, path, name="game.pyf"):
 		"""Create new game file.
 		
-		path : str
-		name : str - Name of the file to create. """
+		@param	path: str
+		@param	name: str - Name of the file to create. """
 		
 		z = ZipFile(os.path.join(path, name), 'w')
 		for f in os.listdir(path):

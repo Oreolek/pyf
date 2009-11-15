@@ -24,7 +24,7 @@ def runGame(game):
 	interface = TerminalInterface(game)
 	interface.output(game.getIntro())
 	while game.state != states.Finished: # While the game is running
-		input = raw_input('> ') # Get user input
+		input = raw_input(game.state.request + ' ') # Get user input
 		if input == 'quit': 
 			break # Exit game 
 		interface.input(input) # Pass player input to the game and print the output

@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-def naturalJoin(l, glue, lastglue):
+def naturalJoin(l, glue = ', ', lastglue = ' and '):
 	'''Join list of strings using glue and lastglue. Join last 2 items with lastglue
 	and the rest with glue. Returns empty string if l empty.
 	

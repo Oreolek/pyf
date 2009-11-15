@@ -98,6 +98,12 @@ class Game(Handler):
 		returns : str'''
 		s = s.replace('*', '')
 		return s
+		
+	def getItem(self, name):
+		for item in self.inventory:
+			if item.name == name:
+				return item
+		raise KeyError("Game inventory has no item %s" % name)
 	
 	def input(self, s):
 		'''Handle user input and return output.
@@ -197,8 +203,7 @@ class Game(Handler):
 
 	def handle(self, sentence, output):
 		if sentence == 'inventory':
-			output.write("You're currently carrying: ", False)
-			self.inv(output)
+			self.actor.inv(output)
 		else:
 			self.unhandledSentence(sentence, output)
 			
@@ -213,15 +218,6 @@ class Game(Handler):
 		
 		o : Actor'''
 		self.actor = o
-		
-	def inv(self, output):
-		'''Write object inventory on output.
-		
-		output : output'''
-		for item in self.actor.inventory:
-			output.write(item.Normal.getDesc('inv'), False, obj=item)
-		
-		output.close()
 		
 	def addItem(self, item):
 		'''Instantiate ItemClass and add it to the game world.

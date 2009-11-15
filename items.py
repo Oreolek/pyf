@@ -23,6 +23,12 @@ from errors import *
 
 import lib, copy
 
+class ItemMeta(handler.HandlerMeta):
+	def __new__(cls, *args, **kwargs):
+		handler.HandlerMeta.__new__(cls, *args, **kwargs)
+		cls.definite = None
+		cls.indefinite = None
+
 class Item(Handler):
 	'''Item is the base class for all the items in PyF game world.'''
 	
@@ -32,6 +38,8 @@ class Item(Handler):
 	'''Called before the item is moved internally in its owner.'''
 	EVT_ITEM_RECEIVED = "itemReceived"
 	'''Called before an item dest is added to item's inventory.'''
+	EVT_ITEM_INT_RECEIVED = "itemIntReceived"
+	'''Called before an item is internally moved to item.'''
 	EVT_ITEM_HANDLE = "itemHandle"
 	EVT_OWNED_ITEM_HANDLE = "itemOwnedItemHandle"
 	
@@ -73,17 +81,10 @@ class Item(Handler):
 	indefinite = None
 	'''str - Indefinite name of this item, eg. "a book".'''
 	
-	spaceAware = False
-	'''True if the player needs to share the owner of this item to touch it.'''
-	
 	wordClass = lib.Noun
 	'''The Word class in which the name is instantiated.'''
 	
 	listeners = {}
-	
-	responses = {
-		'notNear' : '(first walking %s)'
-	}
 	
 	def __init__(self):
 		Handler.__init__(self)
@@ -96,7 +97,7 @@ class Item(Handler):
 		
 		self.props = ()
 		self.inventory = inventory.Inventory(self)
-		#: list - contains all the items this item owns
+		'''list - contains all the items this item owns'''
 		
 		self.newprops = []
 		self.accessible = cls.accessible
@@ -128,6 +129,7 @@ class Item(Handler):
 			id(self) == id(other)
 		
 	def accessibleChildren(self):
+		return True
 		for prop in self.props:
 			if not prop.accessibleChildren():
 				return False
@@ -144,7 +146,11 @@ class Item(Handler):
 				l = splitAndClean(node.node.getAttribute('name'))
 				if node.node.getAttribute('adjective'):
 					self.adjective = splitAndClean(node.node.getAttribute('adjective'))
-					
+				if node.node.hasAttribute('definite'):
+					self.definite = node.node.getAttribute('definite')
+				if node.node.hasAttribute('indefinite'):
+					self.indefinite = node.node.getAttribute('indefinite')
+				
 				self.initWord(l)
 	
 	def XMLWrapup(self, node):
@@ -162,7 +168,6 @@ class Item(Handler):
 			
 		name = utils.makeTuple(name)
 		self.word = self.wordClass(name)
-		#: Word instance
 		self.word.item = self
 		
 		if len(self.adjective) != 0:
@@ -170,19 +175,21 @@ class Item(Handler):
 			self.word.adjective = adjective
 		
 		self.name = self.word.name
-		#: the name of Word is turned into instance name
 		
-		if cls.definite == None:
+		if self.definite == None:
 			self.definite = self.word.definite
 		else:
-			self.definite = cls.definite
-			self.word.definite = cls.definite
+			self.definite = self.definite
+			self.word.definite = self.definite
 			
-		if cls.indefinite == None:
+		if self.indefinite == None:
 			self.indefinite = self.word.indefinite
 		else:
-			self.indefinite = cls.indefinite
-			self.word.indefinite = cls.indefinite
+			self.indefinite = self.indefinite
+			self.word.indefinite = self.indefinite
+			
+		if self.word.isPlural():
+			self.pronoun = 'them'
 		
 	def updateAccessInfo(self, game):
 		'''Update access info for self.'''
@@ -194,22 +201,28 @@ class Item(Handler):
 		
 	def handleEvents(self, sentence):
 		self.dispatchEvent(self.EVT_ITEM_HANDLE)
-		current = self.owner
+		current = self
 		while current != None:
+			if current == sentence.actor:
+				break
+			elif current == self:
+				current = current.owner
+				continue
+
 			current.dispatchEvent(current.EVT_OWNED_ITEM_HANDLE)
 			current = current.owner
 		
 	def intHandle(self, sentence, output):
 		self.word.addWord('*self')
-		self.handleEvents(sentence)
-		
-		if self.location != self.owner:
-			if sentence[:2] == ('*touch', '*self'):
-				if self.location != sentence.actor.location:
-					sentence.actor.intMove(self.location)
-					output.write(self.responses['notNear'] % self.location.name, False)
-					
 		try:
+			self.handleEvents(sentence)
+		
+			if self.location != self.owner:
+				if sentence[:2] == ('*touch', '*self'):
+					if self.location != sentence.actor.location:
+						sentence.actor.intMove(self.location)
+						output.write(sentence.actor.responses['notNear'] % self.location.name, False, obj=sentence.actor)
+					
 			self.handlePrivate(sentence,output)
 
 			for prop in self.props:
@@ -217,6 +230,8 @@ class Item(Handler):
 		except OutputClosed:
 			self.word.removeWord('*self')
 			raise OutputClosed("")
+		except SkipHandle:
+			pass
 		
 		self.word.removeWord('*self')
 		
@@ -289,14 +304,20 @@ class Item(Handler):
 		except GameError:
 			output = None
 		self.dispatchEvent(ItemMoveEvent(Item.EVT_MOVED, output, dest))
-		self.dispatchEvent(ItemMoveEvent(Item.EVT_ITEM_RECEIVED, output, dest))
+		if dest != None:
+			dest.dispatchEvent(ItemMoveEvent(Item.EVT_ITEM_RECEIVED, output, self))
 		self.intMove(dest)
 		try:
 			self.owner.inventory.remove(self)
 		except AttributeError:
 			pass
+			
 		self.owner = dest
-		self.owner.inventory.append(self)
+		
+		try:
+			self.owner.inventory.append(self)
+		except AttributeError:
+			pass
 		
 	def intMove(self, dest):
 		try:
@@ -304,6 +325,9 @@ class Item(Handler):
 		except GameError:
 			output = None
 		self.dispatchEvent(ItemMoveEvent(Item.EVT_INT_MOVED, output, dest))
+		if dest != None:
+			dest.dispatchEvent(ItemMoveEvent(Item.EVT_ITEM_INT_RECEIVED, output, self))
+			
 		self.location = dest
 		
 	def canMove(self, other):
@@ -353,50 +377,96 @@ class Item(Handler):
 class Actor(Item):
 	'''Class for player characters. Handles sentences for examining the surroundings, 
 	moving, saving and loading the game.'''
-	name = 'Player Character', 'player', 'yourself', 'self'
+	name = 'yourself', 'player', 'self'
+	definite = 'yourself'
+	indefinite = 'yourself'
 	pronoun = None
 	
 	WAIT = 'wait'
+	INVENTORY = 'inventory'
+	NOT_A_DIRECTION = "notADirection"
+	'''Printed when player tries to move into a non-direction.'''
+	NO_DIRECTION = "noDirection"
+	"""Printed when player attempts to just walk."""
+	CANT_DO = "cantDo"
+	"""Printed when player can't use verb %s on noun %s."""
+	TOUCH = 'touch'
+	"""Printed when player feels a generic object."""
+	INVENTORY = 'inventory'
+	"""Printed when player requests to display the inventory."""
+	NO_VIOLENCE = 'noViolence'
+	"""Printed as a response to attacks against random nouns."""
+	UNHANDLED = "unhandled"
+	"""Printed as a final error message when every check fails."""
+	SOCIAL_UNHANDLED = "socialUnhandled"
+	"""Printed when player attempts a social action."""
+	SOCIAL_TOUCH_UNHANDLED = "socialUnhandled"
+	"""Printed when player attempts a social touching action."""
+	LISTEN = "listen"
+	"""Default response for "listen"."""
+	PUSH = "push"
+	"""Printed when player attempts to push things without a direction."""
+	NOT_NEAR = "notNear"
+	'''Printed when player needs to approach object before interacting with it.'''
+	ITEM_UNAVAILABLE = "itemUnavailable"
 	
 	responses = {
-		'notADirection' : "%s is not a direction.",
-		'noDirection' : "You should specify which direction you want to walk to.",
-		'nothingHappens' : "You feel nothing unexpected.",
-		'cantDo' : "You can't %s %s.",
+		NOT_A_DIRECTION : "%s is not a direction.",
+		NO_DIRECTION : "You should specify which direction you want to walk to.",
+		TOUCH : "You feel nothing unexpected.",
+		CANT_DO : "You can't %s [self.definite].",
 		'itemUnavailable' : "You can't see anything like that here.",
 		'verbKnown' : "I only understood that you want to %s something.",
-		'unhandled' : "I don't know what that means.",
-		'noViolence' : "Violence never solves anything.",
+		UNHANDLED : "I don't know what that means.",
+		NO_VIOLENCE : "Violence never solves anything.",
+		INVENTORY : "You're carrying %s.",
+		SOCIAL_UNHANDLED : "[self.definite] doesn't seem to notice.",
+		SOCIAL_TOUCH_UNHANDLED : "You doubt [self.pronoun] would like that very much.",
+		LISTEN : "You hear nothing unexpected.",
 		WAIT : 'Time passes.',
+		PUSH : "You'd have to specify where you want to push [self.definite].",
 		'saved' : "Saved!",
-		'loaded' : "Loaded!"
+		'loaded' : "Loaded!",
+		NOT_NEAR : '(first walking %s)'
 	}
-	
+
 	LOOK = "look"
 	'''Verb used to get a description of the player's surroundings.'''
 	
 	def unhandledSentence(self, sentence, output):
 		if sentence[0] == '*verb':
-			if sentence == 'z':
-				self.write(output, self.WAIT)
+
 			if sentence[0] == 'go':
 				if len(sentence) == 2:
-					output.write(self.responses['notADirection'] % (sentence[1].name))
+					output.write(self.responses[self.NOT_A_DIRECTION] % (sentence[1].name))
 				elif len(sentence) == 1:
-					self.write(output, 'noDirection')
-
+					self.write(output, self.NO_DIRECTION)
+			
 			if len(sentence) == 2:
 				if sentence[1] == '*noun':
-					if self.canAccess(sentence[1].item):
-						if sentence[0] == 'touch':
-							self.write(output, 'nothingHappens')
+					item = sentence[1].item
+					if self.canAccess(item):
+						if sentence[0] == 'push':
+							output.write(self.responses[self.PUSH], obj=item)
+						elif sentence[0] == "*social":
+							output.write(self.responses[self.SOCIAL_UNHANDLED], obj=item)
+						elif sentence[0] == "*socialtouch":
+							output.write(self.responses[self.SOCIAL_TOUCH_UNHANDLED], obj=item)
+						elif sentence[0] == 'touch':
+							self.write(output, self.TOUCH, obj = item)
 						elif sentence[0] == '*attack':
-							self.write(output, 'noViolence')
-						output.write(self.responses['cantDo'] % (sentence[0].name, sentence[1].item.definite))
+							self.write(output, self.NO_VIOLENCE, obj=item)
+						output.write(self.responses[self.CANT_DO] % (sentence[0].name, sentence[1].item.indefinite))
 					else:
-						self.write(output, 'itemUnavailable')
-			else:
-				output.write(self.responses['verbKnown'] % sentence[0].name)
+						self.write(output, self.ITEM_UNAVAILABLE)
+				else:
+					output.write(self.responses['verbKnown'] % sentence[0].name)
+			elif len(sentence) == 1:
+				if sentence == 'z':
+					self.write(output, self.WAIT)
+				elif sentence == 'listen':
+					self.write(output, self.LISTEN)
+				
 		
 		self.write(output, 'unhandled')
 		
@@ -432,17 +502,30 @@ class Actor(Item):
 		self.move(room)
 		self.newLocation(output)
 		
+	def inv(self, output):
+		'''Write object inventory on output.
+
+		output : output'''
+		l = []
+		for item in self.inventory:
+			if item.hasProp('Mobile'):
+				l.append(item.Normal.getDesc('inv'))
+				
+		if len(l) == 0:
+			l.append('nothing')
+		output.write(self.responses[self.INVENTORY] % utils.naturalJoin(l, ', ', ' and '))
+
+		output.close()
+
+	
+		
 	def lookAround(self, output, short=False):
 		'''Write the current room description.
 		
 		output : Output
 		short : bool - Whether to write the short description of the room.'''
 		if short:
-			if self.owner.Normal.short == None:
-				output.close()
-			else:
-				output.write(self.owner.Normal.getDesc("short", self.owner))
-				
+			output.close()
 		else:
 			output.write(self.owner.Normal.getLong(), obj = self.owner)
 		
@@ -456,9 +539,9 @@ class Actor(Item):
 		if self.owner.visited:
 			self.lookAround(output, True)
 		else:	
+			self.owner.visited = True
 			self.lookAround(output, False)
 
-		self.owner.visited = True
 			
 	def getMoveDir(self, sentence):
 		'''Get movement direction from sentence.
@@ -484,9 +567,8 @@ class Male(Item):
 class Female(Item):
 	pronoun = "her"
 	
-def _addExit(self, event):
-	self.exits[self.uninitedExits[event.target.__class__]] = event.target
-	del self.uninitedExits[event.target.__class__]
+def _addExit(self, dir, event):
+	self.exits[dir] = event.target
 	
 class Room(Item):
 	'''instances attributes:
@@ -505,7 +587,6 @@ class Room(Item):
 		Item.__init__(self)
 		self.exits = getattr(self, 'exits', {})
 		self.visited = False
-		self.uninitedExits = {}
 		
 	def hasExit(self, d):
 		'''Return true if room has exit d.
@@ -526,13 +607,12 @@ class Room(Item):
 				e = child.getValue()
 				if type(e) == handler.HandlerMeta:
 					if e.inst == None:
-						e.addClassEventListener(e.EVT_INIT, (self, _addExit))
-						self.uninitedExits[e] = child.node.tagName 
+						e.addClassEventListener(e.EVT_INIT, (self, child.node.tagName, _addExit))
 					else:
 						self.exits[child.node.tagName] = e.inst
 				else:
 					self.exits[child.node.tagName] = e
-		except ScriptError:
+		except ScriptChildError:
 			pass
 			
 
@@ -543,6 +623,7 @@ class Room(Item):
 		for exit in self.exits:
 			if d == exit:
 				return self.exits[exit]
+		raise KeyError("Exit '%s' not found in %s" % (d, self))
 				
 	def tryAccess(self, d, output):
 		'''Return exit to the direction d or writes output.
@@ -591,10 +672,10 @@ class Door(Room):
 		pass
 		
 	def access(self, d, output):
-		if self.hasProp('Closable'):
-			if self.Closable.closed:
-				if self.Closable.canOpen():
-					self.Closable.inlineOpen(output)
+		if self.hasProp('Openable'):
+			if self.Openable.closed:
+				if self.Openable.canOpen():
+					self.Openable.inlineOpen(output)
 				else:
 					self.write(output, self.NO_KEY)
 				
@@ -604,6 +685,7 @@ class Door(Room):
 		for exit in self.exits:
 			if other.owner == self.exits[exit]:
 				return True
+		return False
 				
 class Location(Item):
 	wordClass = lib.Location

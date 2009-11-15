@@ -48,8 +48,24 @@ class Handler(object):
 		self.responses = self.responses.copy()
 		
 	def XMLSetup(self, node):
+		for child in node.children:
+			if child.node.tagName == 'attr':
+				self.assignFromXMLNode(child)
+			elif child.node.tagName == 'event':
+				self.addEventListener(child.node.getAttribute('id'), child.getValue())
 		self.handlers.XMLSetup(node)
 		self.responses.XMLSetup(node)
+		
+		
+	def assignFromXMLNode(self, node):
+		for n in node.children:
+			if hasattr(self, n.node.nodeName):
+				try:
+					self.__dict__[n.node.nodeName] = n.getValue()
+				except ScriptClassError:
+					pass
+			else:
+				raise ScriptError("%s has no attribute %s" % (self, n.node.nodeName))
 					
 	def XMLWrapup(self, node):
 		pass
@@ -97,8 +113,12 @@ class Handler(object):
 				pass
 		
 		try:
-			for function in self.listeners[type]:
-				function[1](function[0], event)
+			for f in self.listeners[type]:
+				if f.__class__ in (tuple, list):
+					f[-1](*f[:-1] + (event,))
+				else:
+					if event.output != None:
+						event.output.write(f)
 		except KeyError:
 			pass
 			
@@ -157,6 +177,7 @@ class Handler(object):
 			return self.address
 			
 	def getScript(self):
+		return 
 		if self.address == None:
 			self.address = self.getAddress()
 
@@ -185,7 +206,7 @@ class HandlerAccess:
 	def handle(self, sentence, output):
 		for handler in self.handlers:
 			if sentence == handler:
-				output.write(self.handlers[handler], self.close)
+				output.write(self.handlers[handler], self.close, obj=self.parent)
 
 	def __setitem__(self, name, value):
 		'''Set new handler.

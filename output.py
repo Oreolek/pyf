@@ -55,6 +55,7 @@ class Output:
 					line = self.eval(line, obj, separators)
 					
 				line = self.cleanOutput(line)
+				line = line.strip()
 				self.lines.append(line)
 			
 		if close:
@@ -78,6 +79,7 @@ class Output:
 				count -= 1
 				if count == 0:
 					out += eval(codeBuffer, {'self': obj})
+					codeBuffer = ''
 
 			elif count > 0:
 				codeBuffer+=char
@@ -116,7 +118,7 @@ class Output:
 		raise OutputClosed("Can't write to closed output")
 		
 	@classmethod
-	def cleanOutput(self, s):
+	def cleanOutput(cls, s):
 		'''Clean extra whitespace from string.
 		
 		s : str'''
@@ -128,6 +130,10 @@ class Output:
 		s = s.replace("\n", ' ')
 		while '  ' in s:
 			s = s.replace('  ', ' ')
+		try:
+			s = s[0].upper() + s[1:]
+		except IndexError:
+			pass
 		return s
 		
 	@classmethod

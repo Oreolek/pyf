@@ -65,8 +65,9 @@ class Lib(object):
 		
 		s : string to parse
 		
-		returns : a parsed sentence"""
-		sentence = Sentence(s) #
+		returns : Sentence"""
+		s = s.encode()
+		sentence = Sentence(s)
 		sentence.lib = self
 		s = sentence.s # clean string
 
@@ -98,9 +99,16 @@ class Word(object):
 			else:
 				for w in word:
 					l.append(w)
-				
+
+		for word in l:
+			s = word
+			s = s.replace('the ', '')
+			s = s.replace('a ', '')
+			s = s.replace('an ', '')
+			if s != word:
+				l.append(s)
+			
 		words = l
-		
 		self.name = words[0]
 		
 		l = []
@@ -137,7 +145,7 @@ class Word(object):
 		
 	def sortWords(self, l):
 		"""Sort words according to length, longest to shortest."""
-		l.sort()
+		l.sort(key = lambda x: len(x))
 		l.reverse()
 		return l
 		
@@ -196,6 +204,13 @@ class Word(object):
 				
 		return False
 		
+	def isPlural(self):
+		s = self.name.split(' of ')[0]
+		if s[-1] == 's':
+			return True
+		else:
+			return False
+		
 class Verb(Word):
 	pass
 class Touch(Verb):
@@ -205,6 +220,8 @@ class Attack(Verb):
 class Move(Touch):
 	pass
 class Social(Verb):
+	pass
+class SocialTouch(Touch):
 	pass
 class Answer(Social):
 	pass
@@ -223,7 +240,7 @@ class Noun(Word):
 		else:
 			self.definite = "the %s" % self.name
 	
-		if self.name[-1] == 's': # assume that the name is plural
+		if self.isPlural(): # assume that the name is plural
 			self.indefinite = 'some %s' % self.name
 		else:
 			self.indefinite = None
@@ -335,7 +352,6 @@ class Sentence:
 					
 					if l != [matches[i]]:
 						raise AmbiguityError(l, self, matches[i+len(l):])
-					
 				self.applyMatch(matches[i])
 				
 		# turn rest of the words into word instances
@@ -349,6 +365,7 @@ class Sentence:
 				match = Match(word, self.s, u)
 				if available(self.appliedMatches, match):
 					self.applyMatch(match) 
+					
 				
 		self.finalize()
 		
@@ -406,7 +423,7 @@ class Sentence:
 		'''other : str / Sentence - Parses strings into a sentence according to the 
 		word list. Sentence is matched by matching all Words against each other, skipping
 		Ignored words. Raises Exception if trying to compare to other objects.'''
-		if type(other) == str or type(other) == unicode:
+		if type(other) in (str, unicode):
 			other = self.parseString(other)
 		elif issubclass(other.__class__, Word):
 			if len(self) != 1:
@@ -417,6 +434,7 @@ class Sentence:
 			other = other.words
 		
 		x, y = 0, 0
+		i = 0
 		for i in range(0, min(len(self), len(other))):
 			skip = False
 			while issubclass(other[i+x].__class__, Ignore):
@@ -482,7 +500,7 @@ class Match:
 			return True
 		elif self.x < other.x and self.y > other.y:
 			return True
-		elif self.x == other.x and self.y != other.y or self.y == other.y and self.x != other.y:
+		elif self.x == other.x or self.y == other.y:
 			return True
 		else:
 			return False
@@ -494,7 +512,7 @@ class Match:
 			return False
 		
 consonants = (
-	'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u'
+	'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'z'
 )
 #: matched against the word's beginning to get the article of the word
 

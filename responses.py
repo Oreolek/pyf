@@ -22,8 +22,9 @@ class Responses:
 	def XMLSetup(self, node):
 		for n in node.children:
 			if n.node.nodeName == 'response':
-				if n.node.getAttribute('id'):
-					self.responses[n.node.getAttribute('id')] = n.getValue()
+				if n.node.hasAttribute('id'):
+					s = n.getValue()
+					self[n.node.getAttribute('id')] = s
 	
 	def __init__(self, parent, dict):
 		self.parent = parent

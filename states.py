@@ -52,9 +52,7 @@ class Running(State):
 					item = word.item
 					if self.game.actor.canAccess(item):
 						item.intHandle(sentence, output)
-			'''for item in self.game.inventory:
-				if self.game.actor.canAccess(item) or item == self.game.actor:
-					item.intHandle(sentence, output)'''
+						
 			self.game.actor.owner.intHandle(sentence, output)
 			self.game.handlePrivate(sentence, output)
 		except OutputClosed:
@@ -86,8 +84,12 @@ class Disambiguation(State):
 	def tryResolve(self):
 		l = []
 		for match in self.words:
-			if self.game.actor.canAccess(match.word.item):
-				l.append(match)
+			if type(match.word) == lib.Noun:
+				if self.game.actor.canAccess(match.word.item):
+					l.append(match)
+			else:
+				raise Excepion("Can't resolve %s - only nouns can be ambiguous." % str(match.word))
+				
 				
 		self.words = l
 		return self.resolved()
@@ -95,6 +97,9 @@ class Disambiguation(State):
 	def resolved(self):
 		if len(self.words) == 1:
 			return True
+		elif len(self.words) == 0:
+			import pdb
+			pdb.set_trace()
 		else:
 			return False
 			
@@ -102,13 +107,12 @@ class Disambiguation(State):
 		self.matches.insert(0, match)
 		self.sentence.applyMatches(self.matches)
 		self.restoreState()
-		
 	
 	def message(self):
 		s = 'Which do you mean, '
 		l = []
 		for word in self.words:
-			l.append(word.word.item.definite)
+			l.append(word.word.definite)
 		s += utils.naturalJoin(l, ', ', ' or ')
 		s += '?'
 		
@@ -131,7 +135,7 @@ class Talking(State):
 		else:
 			try:
 				self.npc.converseAbout(sentence, output)
-			except game.OutputClosed:
+			except OutputClosed:
 				pass
 		
 	def end(self):
