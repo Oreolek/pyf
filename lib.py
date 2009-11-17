@@ -78,7 +78,7 @@ class Lib(object):
 			match = word.containedIn(s)
 			
 			if match:
-				matches.append(match)
+				matches.extend(match)
 		
 		sentence.applyMatches(matches)
 		
@@ -172,16 +172,10 @@ class Word(object):
 		return iter(self.words)
 		
 	def containedIn(self, s):
-		"""Checks if string s contains the word.
-		
-		s : string
-		
-		returns : Match object or None if failed"""
+		l = []
 		for word in self:
-			try:
-				return self.matchString(word, s)
-			except MatchingError:
-				continue
+			l.extend(self.matchString(word, s))
+		return l
 						
 	def matchString(self, word, s):
 		"""Checks if string s contains word.
@@ -190,7 +184,7 @@ class Word(object):
 		s : string
 		
 		returns : Match instance"""
-		return Match(word,s,self)
+		return matchWord(word,s,self)
 
 	def __str__(self):
 		return self.name
@@ -262,18 +256,20 @@ class Noun(Word):
 		returns : Match instance or None if failed"""
 		if self.adjective == None:
 			return Word.matchString(self, word, s)
-
 		else:
-			match = Match(word, s, self)
-
-			for a in self.adjective:
-				newWord = a+' '+word # construct new string prefixed with an adjective
-				try:
-					return self.matchString(newWord, s) # match new string
-				except MatchingError:
-					continue
-					
-			return match
+			matches = matchWord(word, s, self)
+			for match in matches:
+				for a in self.adjective:
+					newWord = a+' '+word # construct new string prefixed with an adjective
+					match = self.matchString(newWord, s) # match new string
+					if match:
+						return match
+						
+			if matches:
+				return [matches[0]]
+			else:
+				return matches
+			
 				
 			
 	def __eq__(self, other):
@@ -353,6 +349,8 @@ class Sentence:
 					
 			return True
 			
+		self.matches = matches
+			
 		matches.sort(key = lambda x: -len(x)) # sort from longest match to the shortest
 		for i in range(0, len(matches)):
 			if available(self.appliedMatches, matches[i]):
@@ -379,7 +377,7 @@ class Sentence:
 				u.removeWord('*unknown')
 				if word[0] == '*':
 					u.addWord(word)
-				match = Match(word, self.s, u)
+				match = Match(word, self.s, u, self.s.index(word)-1)
 				if available(self.appliedMatches, match):
 					self.applyMatch(match) 
 					
@@ -397,7 +395,7 @@ class Sentence:
 		"""Finalize word list - turn match instances into words."""
 		l = []
 		for word in self.words:
-			l.append(word.word)
+			l.append(word.wordObject)
 		self.words = tuple(l)
 		
 	def __str__(self):
@@ -450,26 +448,33 @@ class Sentence:
 		elif issubclass(other.__class__, Sentence):
 			other = other.words
 		
-		x, y = 0, 0
-		i = 0
-		for i in range(0, min(len(self), len(other))):
-			skip = False
-			while issubclass(other[i+x].__class__, Ignore):
-				x += 1
-
-			while issubclass(self[i+y].__class__, Ignore):
-				y += 1
-			
-			if self[i+y] != other[i+x]:
-				return False
-				
-		if i+x != len(other)-1 or i+y != len(self)-1:
+		try:
+			for x, y in self.iterSentences(other):
+				if x != y:
+					return False
+		except MatchingError, e:
 			return False
-
+				
 		return True
 		
+	def iterSentences(self, other):
+		x, y = 0, 0
+		for i in range(min(len(self), len(other))):
+			try:
+				while self[i+x].__class__ == Ignore:
+					x += 1
+				while other[i+y].__class__ == Ignore:
+					y += 1
+			except KeyError:
+				raise MatchingError("Too short")
+
+			yield self[i+x], other[i+y]
+			
+		if i+x+len(other) != i+y+len(self):
+			raise MatchingError("Too long")
+		
 	def __ne__(self, other):
-		return self.__eq__(other)*-1+1 == True
+		return self.__eq__(other) == False
 		
 	def __getslice__(self, start, end):
 		'''Create a new sentence with the words from the slice.'''
@@ -488,19 +493,26 @@ class Sentence:
 				return True
 				
 		return False
-		
-class Match:
-	'''Used internally for matching strings in user input.'''
-	def __init__(self, word, s, r):
-		self.s = word
-		word = ' '+word+' '
-		self.word = r
 
-		try:
-			self.x = s.index(word) + 1
-		except ValueError:
-			raise MatchingError("Match not found.")
-		self.length = len(word) - 2
+def matchWord(word, s, wordObject):
+	w = ' %s ' % word
+	e = []
+	l = s.rsplit(w,1)
+	while len(l) > 1:
+		e.append(Match(word, s, wordObject, max(len(l[0])-1, 0)))
+		l.pop()
+		l[0] += ' '
+		l = l[0].rsplit(w,1)
+		
+	return e
+		
+class Match(object):
+	'''Used internally for matching strings in user input.'''
+	def __init__(self, word, s, wordObject, index):
+		self.s = word
+		self.x = index
+		self.wordObject = wordObject
+		self.length = len(word)
 		self.y = self.x + self.length
 		
 	def __nonzero__(self):

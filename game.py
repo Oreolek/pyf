@@ -20,34 +20,50 @@ from handler import Handler, HandlerEvent
 from errors import *
 
 class Game(Handler):
-	inst = None
-	lib = lib.standardLib()
-	inventory = []
-	actor = None
+	'''Superclass for any PyF games.'''
 	
+	lib = lib.standardLib()
+	'''Lib to use for parsing user input.'''
+	inventory = []
+	'''List of all items currently in the game.'''
+
 	name = "Untitled Game"
-	version = "0.1"
+	'''The title of the game.'''
+	version = "0"
+	'''Version of the game.'''
 	author = "Pai Ef"
+	'''Author name.'''
 	IFID = ''
 	
 	savefile = 'default.save'
+	'''Default file to use for saving and loading game.'''
 	
 	description = ""
+	'''Description of the game; invoked in intro the title is shown.'''
 	intro = ""
+	'''Description of the game; invoked in intro after the title.'''
 	
 	debug = True
+	'''Allow invoking pdb.'''
+	transcribe = False
+	'''True if the game should automatically enable transcription.'''
 	
 	EVT_PICKLE = 'gameSave'
+	'''Fired when user writes tries to save through the text interface.'''
 	EVT_UNPICKLE = 'gameLoad'
+	'''Fired when user writes tries to load through the text interface.'''
 	
 	script = None
+	'''File-like object to instantiate into XMLScript.'''
 	
 	def __init__(self):
-		self.__class__.inst = self
+		'''Init game.'''
 		Handler.__init__(self)
-		self.lib = self.lib
 		self.turns = 0
-		self.output = None
+		'''Holds the number of turns that have passed. Ticks up every time 
+		Game.input is called.'''
+		self.actor = None
+		'''Default actor to pass input to.'''
 		
 		if self.script != None:
 			s = self.script.read()
@@ -65,9 +81,8 @@ class Game(Handler):
 		
 		@type	amount:	int
 		@type	id:	str
-		@param	id:	A unique ID describing what the points have been
-					awarded for. Should be human readable, eg. 
-					"eating blueberry pie".'''
+		@param	id:	A unique ID describing what the points have been awarded for. 
+					Should be human readable, eg. "eating blueberry pie".'''
 		if id not in self.scoreList:
 			self.scoreList[id] = amount
 			
@@ -79,7 +94,7 @@ class Game(Handler):
 		return i
 		
 	def debugger(self):
-		'''Run the Python command line debugger.'''
+		'''Inspect game state through Python command line debugger.'''
 		import pdb
 		print "Initiating Python debugger"
 		print "--------------------------"
@@ -89,11 +104,14 @@ class Game(Handler):
 		
 		
 	def setState(self, state):
+		'''DEPRECATED. Use 
+			Game.actor.state = State
+		instead.'''
 		self.actor.state = state
 		
 	def end(self, output):
 		'''End the game setting the state as finished and writing final output.'''
-		self.setState(states.Finished(self))
+		self.actor.state = states.Finished(self.actor)
 		self.ending(output)
 		
 	def ending(self, output):
@@ -103,13 +121,17 @@ class Game(Handler):
 	def cleanInput(self, s):
 		'''Clean input of unwanted characters.
 		
-		s : str
+		@type	s:	str
 		
-		returns : str'''
+		@rtype	:	str'''
 		s = s.replace('*', '')
 		return s
 		
 	def getItem(self, name):
+		'''Get item with name. Raise KeyError if not in game.
+		
+		@type	name:	str
+		@rtype	:		Item'''
 		for item in self.inventory:
 			if item.name == name:
 				return item
@@ -118,9 +140,9 @@ class Game(Handler):
 	def input(self, s):
 		'''Handle user input and return output.
 		
-		s : string
+		@type	s:	str
 		
-		returns : Output'''
+		@rtype	:	Output'''
 		s = self.cleanInput(s)
 		o = output.Output()
 
@@ -132,13 +154,19 @@ class Game(Handler):
 		s = lib.Sentence(s.encode())
 		self.actor.input(s, o)
 		
-		self.output = None
+		if self.transcribe:
+			if not hasattr(self, 'transcription'):
+				import datetime
+				self.transcription = open("%s-%s.txt" % (self.name, datetime.datetime.now().strftime(r"%Y-%m-%d %H:%M")), 'w')
+			self.transcription.write(self.actor.state.request + ' ' + s.s + '\n')
+			self.transcription.write('\n'.join(o.lines) + '\n')
+
 		return o
 		
 	def writeIntro(self, output):
 		'''Write game intro.
 		
-		output : Output'''
+		@type	output:	Output'''
 		output.write(self.description, False)
 		output.write('<h1>' + self.name + '</h1>', False)
 		#output.write('by <b>' + self.author + '</b>', False)
@@ -152,7 +180,7 @@ class Game(Handler):
 	def getIntro(self):
 		'''Create new output object and write game intro on it.
 		
-		returns : Output'''
+		@rtype:	Output'''
 		o = output.Output()
 		try:
 			self.writeIntro(o)
@@ -163,10 +191,18 @@ class Game(Handler):
 	def handle(self, sentence, output):
 		pass
 			
-	def setActor(self, o):
-		'''Set game actor.
+	@property
+	def actor(self):
+		return self._actor
 		
-		o : Actor'''
+	@actor.setter
+	def actor(self, value):
+		self._actor = value
+		
+	def setActor(self, o):
+		'''DEPRECATED. Use 
+			Game.actor = Actor
+		instead.'''
 		self.actor = o
 		
 	def addItem(self, item):
@@ -176,6 +212,7 @@ class Game(Handler):
 		self.inventory.append(item)
 		self.lib.append(item.word)
 		item.updateAccessInfo(self)
+		item.init()
 		
 	def addItems(self, *items):
 		'''Add items to the game world.
@@ -190,14 +227,12 @@ class Game(Handler):
 		@type	item:	Item
 		@param	item:	item to remove.'''
 		
-		try:
+		if item.owner != None:
 			item.owner.inventory.remove(item)
-		except AttributeError:
-			pass
-			
 		item.owner = None
+		
+		item.removeWord()
 		self.inventory.remove(item)
-		self.lib.remove(item.word)
 		item.game = None
 			
 	def initFromScript(self, dict):

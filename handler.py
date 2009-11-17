@@ -25,7 +25,6 @@ class HandlerMeta(type):
 		f.handlers = HandlerAccess(f)
 		f.listeners = f.listeners.copy()
 		f.responses = responses.Responses(f, f.responses)
-		f.init()
 		return f
 		
 	def __new__(cls, *args, **kwargs):
@@ -132,7 +131,7 @@ class Handler(object):
 	def addClassEventListener(cls, type, function):
 		if type not in cls.listeners:
 			cls.listeners[type] = []
-		cls.listeners[type].append(function)
+		cls.listeners[type].insert(0, function)
 
 	def addEventListener(self, type, handler):
 		'''Add event listener.
@@ -146,13 +145,12 @@ class Handler(object):
 							[-1] The actual handler function.'''
 		validateHandlerFunction(handler[1])
 			
-		try:
-			l = self.listeners[type]
-		except KeyError:
+		if type not in self.listeners:
 			self.listeners[type] = []
-			l = self.listeners[type]
 			
-		l.append(handler)
+		l = self.listeners[type]
+			
+		l.insert(0, handler)
 		
 	def removeEventListener(self, type, handler):
 		'''Remove event listener.

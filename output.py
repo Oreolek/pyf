@@ -122,11 +122,10 @@ class Output:
 					try:
 						out += eval(codeBuffer, {'self': obj, 'nouns':nouns, 'items':items, 'verbs':verbs, 'sentence':sentence, 'actor':actor})
 					except Exception, e:
-						import pdb
-						pdb.set_trace()
 						raise InlineCodeError('Error in inline code: [%s] in \n %s \n' % (codeBuffer, s) + str(e))
 					codeBuffer = ''
 					continue
+				
 
 			if count > 0:
 				codeBuffer+=char

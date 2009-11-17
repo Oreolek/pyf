@@ -34,8 +34,12 @@ class Item(Handler):
 	
 	EVT_MOVED = 'evtMoved'
 	'''Fired brefore item is moved around in the game world.'''
+	EVT_ITEM_OWNER_MOVED = 'evtItemOwnerMoved'
+	'''TODO'''
 	EVT_INT_MOVED = 'evtIntMoved'
 	'''Fired before item is moved internally to a new location.'''
+	EVT_ITEM_OWNER_INT_MOVED = "evtItemOwnerIntMoved"
+	'''TODO'''
 	EVT_ITEM_RECEIVED = "evtItemReceived"
 	'''Fired before an item dest is added to item's inventory.'''
 	EVT_ITEM_INT_RECEIVED = "evtItemIntReceived"
@@ -76,8 +80,7 @@ class Item(Handler):
 	construction. Property instances are deepcopied during construction.'''
 	accessible = True
 	'''bool - Controls whether the item is accessible in the game world. This
-	can be used to hide the object regardless of its real location in the game world.
-	May be manipulated by props.'''
+	can be used to hide the object regardless of its real location in the game world.'''
 	owner = None
 	'''Item instance - Owner of this item in the game world.'''
 	definite = None
@@ -203,6 +206,13 @@ class Item(Handler):
 			
 		if self.word.isPlural():
 			self.pronoun = 'them'
+			
+	def removeWord(self):
+		self.ownerGame.lib.remove(self.word)
+		word = self.word
+		self.word = None
+		self.definite = None
+		self.indefinite = None
 		
 	def updateAccessInfo(self, game):
 		'''Update access info for self.'''
@@ -295,7 +305,7 @@ class Item(Handler):
 		'''Finalize the current property list.'''
 		self.finalizedprops = str(self.newprops)
 		while self.newprops != []:
-			self.newprops.pop().initProp()
+			self.newprops.pop().init()
 			
 	def removeProp(self, prop):
 		'''Remove property.
@@ -312,7 +322,7 @@ class Item(Handler):
 		
 		dest : Item'''
 		try:
-			output = self.ownerGame.output
+			output = self.ownerGame.actor.output
 		except GameError:
 			output = None
 		self.dispatchEvent(ItemMoveEvent(self.EVT_MOVED, output, dest))
@@ -334,7 +344,7 @@ class Item(Handler):
 			
 	def intMove(self, dest):
 		try:
-			output = self.ownerGame.output
+			output = self.ownerGame.actor.output
 		except GameError:
 			output = None
 		self.dispatchEvent(ItemMoveEvent(self.EVT_INT_MOVED, output, dest))

@@ -88,18 +88,22 @@ words = (
 
 	Verb('wait', 'z'),
 
+	Direction('north', 'n'),
 	Direction('east', 'e'),
 	Direction('west', 'w'),
 	Direction('south', 's'),
-	Direction('north', 'n'),
 	Direction('northeast', 'ne'),
 	Direction('northwest', 'nw'),
 	Direction('southeast', 'se'),
 	Direction('southwest', 'sw'),
 	Direction('up', 'u'),
 	Direction('down', 'd'),
-	Direction('in'),
+	Direction('in', 'inside'),
 	Direction('outside', 'out', 'exit'),
+	Direction('left'),
+	Direction('right'),
+	Direction('forward'),
+	Direction('backward'),
 
 	Preposition('about'),
 	Preposition('with', 'using'),
@@ -108,7 +112,6 @@ words = (
 	Preposition('under'),
 	Preposition('next to'),
 	Preposition('to'),
-	Preposition('inside'),
 	Preposition('through'),
 	Preposition('beside'),
 

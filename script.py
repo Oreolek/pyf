@@ -20,6 +20,7 @@ from xml.dom import minidom
 from errors import *
 
 class XMLScriptNode:
+	elementClass = minidom.Element
 	safe = {}
 	
 	def __init__(self, node, dict):
@@ -28,11 +29,10 @@ class XMLScriptNode:
 		self.children = []
 		self.node.normalize()
 		for node in self.node.childNodes:
-			if node.__class__ == minidom.Element:
+			if node.__class__ == self.elementClass:
 				self.children.append(XMLScriptNode(node, dict))
 		
 	def getChild(self, name):
-		e = self.node.getElementsByTagName(name)
 		for node in self.children:
 			if node.node.tagName == name:
 				return node

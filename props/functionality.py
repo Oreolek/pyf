@@ -257,7 +257,7 @@ class Wearable(Property):
 			if self.worn:
 				return self.responses[self.INV_WORN]
 		
-	def initProp(self):
+	def init(self):
 		self.owner.addEventListener(self.owner.EVT_MOVED, (self, _wearableMoved))
 		
 	def doStrip(self):

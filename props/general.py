@@ -40,13 +40,12 @@ class Normal(Property):
 			self.examine(output)
 		
 	def examine(self, output):
-		self.doExamine()
 		output.write(self.getLong())
 		
 	def doExamine(self):
 		self.dispatchEvent(self.EVT_EXAMINED)
 		
-	def initProp(self):
+	def init(self):
 		if self.short == None:
 			self.short = self.owner.indefinite
 		if self.inv == None:
@@ -81,6 +80,7 @@ class Normal(Property):
 		return self.fillDescription(s, self.owner)
 			
 	def getLong(self):
+		self.doExamine()
 		return self.getFlat('long')
 		
 	def fillDescription(self, s, target):
@@ -419,7 +419,7 @@ class Dark(Property):
 		Property.__init__(self)
 		self.light = light
 		
-	def initProp(self):
+	def init(self):
 		self.owner.Normal.addEventListener(Normal.EVT_EXAMINED, (self, _darkExamined))
 		self.owner.addEventListener(self.owner.EVT_OWNED_ITEM_HANDLE, (self, _darkOwnedItemHandle))
 		

@@ -93,10 +93,6 @@ class Property(handler.Handler):
 			raise PropError("Property %s's owner is set to None" % self.__class__.__name__)
 		return self.owner.game
 		
-	def initProp(self):
-		'''Called after the property list has been finalized to allow final access
-		to other properties' attributes.'''
-		
 	def handleScript(self, sentence, output):
 		pass
 

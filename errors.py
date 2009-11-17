@@ -41,7 +41,10 @@ class MoveError(Exception):
 
 class AmbiguityError(Exception):
 	def __init__(self, words, sentence, matches):
-		Exception.__init__(self ,"Word \"%s\" matched by %i words" % (str(words[0].s), len(words)))
+		s = "Word \"%s\" matched by %i words" % (str(words[0].s), len(words))
+		for match in words:
+			s += '\n' + str(match.wordObject.__class__)
+		Exception.__init__(self,s)
 		self.sentence = sentence
 		self.words = words
 		self.matches = matches
