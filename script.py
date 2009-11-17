@@ -116,6 +116,3 @@ class XMLScript(XMLScriptNode):
 		self.doc = minidom.parseString(s)
 		self.doc.normalize()
 		XMLScriptNode.__init__(self, self.doc.documentElement, dict)
-		
-	def getNode(self, address):
-		raise ScriptError

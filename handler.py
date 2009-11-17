@@ -42,10 +42,11 @@ class Handler(object):
 	responses = {}
 		
 	def __init__(self):
-		#: HandlerAccess - Dict like item for default sentence handlers.
 		self.owner = getattr(self, 'owner', None)
+		'''Owner of this object in the game world.'''
 		
 		self.responses = self.responses.copy()
+		'''Instantiated into a Responses object after object initiation.'''
 		
 	def XMLSetup(self, node):
 		for child in node.children:
@@ -76,7 +77,8 @@ class Handler(object):
 		output.write(self.responses[name], close=close, obj=obj)
 
 	def init(self):
-		"""Set up any user defined variables for item. Default implementation does nothing."""
+		"""Set up any user defined variables for item. Default implementation 
+		does nothing."""
 		pass
 		
 	def initFromScriptNode(self, node, dict):
@@ -84,7 +86,7 @@ class Handler(object):
 		
 	@property
 	def ownerGame(self):
-		'''return : Game'''
+		'''@rtype	:	Game'''
 		try:
 			if self.game is None:
 				raise AttributeError("%s has no game" % self)
@@ -135,9 +137,13 @@ class Handler(object):
 	def addEventListener(self, type, handler):
 		'''Add event listener.
 		
-		type : str - The event type to listen to.
-		handler : tuple - 2-item tuple where the first item is self object for the
-		function and second is a function or a callable object.'''
+		@type	type:		str
+		@param	type:		ID of the event type to listen to.
+		
+		@type	handler	:	tuple
+		@param	handler	:	[:-1] Arguments to pass to handler function when event is
+							fired.
+							[-1] The actual handler function.'''
 		validateHandlerFunction(handler[1])
 			
 		try:
@@ -148,12 +154,15 @@ class Handler(object):
 			
 		l.append(handler)
 		
-	def removeEventListener(self, type, function):
+	def removeEventListener(self, type, handler):
 		'''Remove event listener.
 		
-		type : str
-		function : tuple'''
-		self.listeners[type].remove(function)
+		@type	type:		str
+		@param	type:		Event ID.
+		
+		@type	handler:	tuple
+		@param	handler:	The same tuple that was used to add the event listener.'''
+		self.listeners[type].remove(handler)
 	
 	def intHandle(self, sentence, output):
 		'''Default sentence handling process. Should be called only from State.handle.'''
@@ -167,26 +176,6 @@ class Handler(object):
 		self.handleScript(sentence, output)
 		self.handlers.handle(sentence, output)
 		
-	def getAddress(self):
-		if self.address == None:
-			if self.owner == None:
-				return self.__class__.__name__
-			else:
-				try:
-					s = self.location.getAddress()
-				except AttributeError:
-					s = self.owner.getAddress()
-				return s + ':' + self.__class__.__name__
-		else:
-			return self.address
-			
-	def getScript(self):
-		return 
-		if self.address == None:
-			self.address = self.getAddress()
-
-		return self.ownerGame.script.getNode(self.address)
-			
 	def handle(self, sentence, output):
 		pass
 		

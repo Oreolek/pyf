@@ -531,6 +531,6 @@ class Match:
 consonants = (
 	'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'z'
 )
-#: matched against the word's beginning to get the article of the word
+'''matched against the word's beginning to get the article of the word'''
 
 from standardlib import standardLib # included here for convenience

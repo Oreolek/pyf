@@ -19,9 +19,9 @@ along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 class Inventory:
 	def __init__(self, parent):
 		self.parent = parent
-		#: Item this inventory belongs to
+		'''Item this inventory belongs to'''
 		self.list = []
-		#: list of items in inventory
+		'''list of items in inventory'''
 		
 	def __iter__(self):
 		for item in self.list:

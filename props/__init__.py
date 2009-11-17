@@ -26,7 +26,7 @@ class SwitchEvent(handler.HandlerEvent):
 	def __init__(self, type, value):
 		handler.HandlerEvent.__init__(self, type, None)
 		self.value = value
-		#: value that the switch is being changed to
+		'''value that the switch is being changed to'''
 
 class PropertyMeta(handler.HandlerMeta):
 	@property

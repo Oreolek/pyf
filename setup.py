@@ -20,7 +20,7 @@ setup(name="pyf",
 	version="0.6b",
 	description="Python IF library",
 	url="http://pyf.sourceforge.net/",
-	packages=['pyf','pyf.interface'],
+	packages=['pyf','pyf.interface', 'pyf.props'],
 	maintainer="Tuomas Kanerva",
 	maintainer_email="tuomas.kanerva@gmail.com"
 	)
