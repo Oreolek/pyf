@@ -26,6 +26,9 @@ class Importer:
 		self.file = file
 		f = self.file.open('__init__.py')
 		self.content = f.read()
+		
+		self.content = self.content.replace('\r\n', '\n')
+        
 		f.close()
 		
 		self.locals = {'open': self.open, 'file': self.open}

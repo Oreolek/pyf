@@ -279,7 +279,7 @@ class Openable(Property):
 		
 		self.addEventListener(self.EVT_STATE_OPEN, (self, _opened))
 		
-	def initProp(self):
+	def init(self):
 		self.owner.addEventListener(self.owner.EVT_OWNED_ITEM_HANDLE, (self, _openableHandle))
 		
 	def handle(self, sentence, output):
