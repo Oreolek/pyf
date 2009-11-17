@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>."""
 
 import lib, states, script, items, output
-from handler import Handler
+from handler import Handler, HandlerEvent
 from errors import *
 
 class Game(Handler):
@@ -40,33 +40,43 @@ class Game(Handler):
 	EVT_PICKLE = 'gameSave'
 	EVT_UNPICKLE = 'gameLoad'
 	
-	l = []
-	
 	script = None
 	
-	responses = {
-		'zeroLengthSentence' : "I don't understand."
-	}
-	
 	def __init__(self):
-		self.__class__.l.append(self)
 		self.__class__.inst = self
 		Handler.__init__(self)
 		self.lib = self.lib
 		self.turns = 0
-		self.state = None
-		self.setState(states.Running(self))
-		self.pronouns = {}
 		self.output = None
-		self.timedEvents = []
 		
 		if self.script != None:
 			s = self.script.read()
 			self.script.close()
 			self.script = s
 			
+		self.scoreList = {}
+	
+	@property
 	def ownerGame(self):
 		return self
+		
+	def addScore(self, amount, id):
+		'''Used to add to the game score counter.
+		
+		@type	amount:	int
+		@type	id:	str
+		@param	id:	A unique ID describing what the points have been
+					awarded for. Should be human readable, eg. 
+					"eating blueberry pie".'''
+		if id not in self.scoreList:
+			self.scoreList[id] = amount
+			
+	@property
+	def score(self):
+		i = 0
+		for score in self.scoreList.keys():
+			i += score
+		return i
 		
 	def debugger(self):
 		'''Run the Python command line debugger.'''
@@ -79,7 +89,7 @@ class Game(Handler):
 		
 		
 	def setState(self, state):
-		self.state = state
+		self.actor.state = state
 		
 	def end(self, output):
 		'''End the game setting the state as finished and writing final output.'''
@@ -119,69 +129,18 @@ class Game(Handler):
 			o.write('Debugger closed', False)
 			return o
 			
-		try:
-			s = self.lib.parse(s)
-		except AmbiguityError, e:
-			state = states.Disambiguation(self, e)
-			self.setState(state)
-			
-			if state.tryResolve():
-				state.resumeMatching(state.words[0])
-				s = state.sentence
-			else:
-				o.write(self.state.message(), False)
-				return o
-				
+		s = lib.Sentence(s.encode())
 		self.actor.input(s, o)
-			
-		if len(s) == 0:
-			try:
-				self.unhandledSentence(s, o)
-			except OutputClosed:
-				pass
-			return o
-		self.output = o
-		self.turns += 1
-		
-		
-		for word in s:
-			if issubclass(word.__class__, lib.Noun):
-				o.target = word.item
-				if word.item.pronoun != None:
-					try:
-						if word.item.pronoun in self.pronouns:
-							self.pronouns[word.item.pronoun].removeWord(word.item.pronoun)
-					except ValueError:
-						pass
-
-					word.addWord(word.item.pronoun)
-					self.pronouns[word.item.pronoun] = word
-						
-		self.state.handle(s, o)
-		o.open()
-		
-		o.canClose = False
-		l = self.timedEvents
-		self.timedEvents = []
-		for event in l:
-			if event(s, o):
-				self.timedEvents.append(event)
-		o.canClose = True
 		
 		self.output = None
 		return o
-		
-	def delPronouns(self):
-		'''Clear the pronoun list.'''
-		for word in self.pronouns:
-			self.pronouns[word].removeWord(word)
 		
 	def writeIntro(self, output):
 		'''Write game intro.
 		
 		output : Output'''
 		output.write(self.description, False)
-		output.write('<b>' + self.name + '</b>', False)
+		output.write('<h1>' + self.name + '</h1>', False)
 		#output.write('by <b>' + self.author + '</b>', False)
 		#output.write('Version ' + self.version, False)
 		output.write(self.intro, False)
@@ -202,17 +161,8 @@ class Game(Handler):
 		return o
 
 	def handle(self, sentence, output):
-		if sentence == 'inventory':
-			self.actor.inv(output)
-		else:
-			self.unhandledSentence(sentence, output)
+		pass
 			
-	def unhandledSentence(self, sentence, output):
-		if len(sentence) == 0:
-			self.write(output, 'zeroLengthSentence')
-		else:
-			self.actor.unhandledSentence(sentence, output)
-		
 	def setActor(self, o):
 		'''Set game actor.
 		
@@ -233,6 +183,22 @@ class Game(Handler):
 		*items : Item'''
 		for item in items:
 			self.addItem(item)
+			
+	def removeItem(self, item):
+		'''Remove item and its word from game.
+		
+		@type	item:	Item
+		@param	item:	item to remove.'''
+		
+		try:
+			item.owner.inventory.remove(item)
+		except AttributeError:
+			pass
+			
+		item.owner = None
+		self.inventory.remove(item)
+		self.lib.remove(item.word)
+		item.game = None
 			
 	def initFromScript(self, dict):
 		'''Init this game from current script.
@@ -257,7 +223,7 @@ class Game(Handler):
 		f.close()
 		
 	def __getstate__(self):
-		return (self.inventory, self.lib, self.actor, self.state, self.pronouns, self.turns)
+		return (self.inventory, self.lib, self.actor, self.turns, self.scoreList)
 		
 	def unpickle(self):
 		'''Unpickle self.savefile and load it as current game state. You can
@@ -276,11 +242,10 @@ class Game(Handler):
 			item.updateAccessInfo(self)
 		self.lib = f[1]
 		self.actor = f[2]
-		self.state = f[3]
-		self.state.game =	self
-		self.pronouns = f[4]
-		self.turns = f[5]
+		self.turns = f[3]
+		self.scoreList = f[4]
 		
-class GameEvent:
+class GameEvent(HandlerEvent):
 	def __init__(self, type):
+		HandlerEvent.__init__(self, type, None)
 		self.type = type

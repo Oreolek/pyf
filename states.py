@@ -23,9 +23,10 @@ class State:
 	'''Base class.'''
 	request = ">"
 	
-	def __init__(self, game):
-		self.game = game
-		self.oldState = self.game.state
+	def __init__(self, actor):
+		self.actor = actor
+		if hasattr(self.actor, 'state'):
+			self.oldState = self.actor.state
 	
 	def handle(self, sentence, output):
 		raise StateError("Handler function undefined.")
@@ -39,28 +40,56 @@ class State:
 		return self.__eq__(other)*-1+1 == True
 		
 	def restoreState(self):
-		self.game.setState(self.oldState)
+		self.actor.state = self.oldState
+		
+	def handleTimedEvents(self, sentence, output):
+		return self.oldState.handleTimedEvents(sentence, output)
 
 class Running(State):
+	timedEvents = []
+	
 	def handle(self, sentence, output):
-		self.game.s = sentence
-		
 		try:
-			self.game.actor.intHandle(sentence, output)
-			for word in sentence:
-				if type(word) == lib.Noun:
-					item = word.item
-					if self.game.actor.canAccess(item):
-						item.intHandle(sentence, output)
+			actor = self.actor
+			actor.intHandle(sentence, output)
+			for word in sentence.nouns:
+				item = word.item
+				if actor.canAccess(item):
+					item.intHandle(sentence, output)
 						
-			self.game.actor.owner.intHandle(sentence, output)
-			self.game.handlePrivate(sentence, output)
+			actor.owner.intHandle(sentence, output)
+			actor.ownerGame.intHandle(sentence, output)
+			handled = False
 		except OutputClosed:
-			pass
+			handled = True
 			
+		timed = self.handleTimedEvents(sentence, output)
+		if not handled and not timed:
+			try:
+				actor.unhandledSentence(sentence, output)
+				raise GameError("Sentence %s wasn't handled" % str(sentence))
+			except OutputClosed:
+				pass
+	
+	def handleTimedEvents(self, sentence, output):
+		l = self.timedEvents
+		self.timedEvents = []
+		handled = False
+		for event in l:
+			output.open()
+			try:
+				event.handle(sentence, output)
+			except OutputClosed, e:
+				handled = True
+				
+			if not event.done:
+				self.timedEvents.append(event)
+		
+		return handled
+		
 class Disambiguation(State):
-	def __init__(self, game, error):
-		State.__init__(self, game)
+	def __init__(self, actor, error):
+		State.__init__(self, actor)
 		self.words = error.words
 		self.sentence = error.sentence
 		self.matches = error.matches
@@ -85,11 +114,14 @@ class Disambiguation(State):
 		l = []
 		for match in self.words:
 			if type(match.word) == lib.Noun:
-				if self.game.actor.canAccess(match.word.item):
+				if match.word in self.sentence.actor.pronouns.values():
+					if self.sentence.actor.canAccess(match.word.item):
+						l = [match]
+						break
+				elif self.actor.canAccess(match.word.item):
 					l.append(match)
 			else:
-				raise Excepion("Can't resolve %s - only nouns can be ambiguous." % str(match.word))
-				
+				raise DisambiguationError("Can't resolve %s - only nouns can be ambiguous." % str(match.word))
 				
 		self.words = l
 		return self.resolved()
@@ -98,10 +130,12 @@ class Disambiguation(State):
 		if len(self.words) == 1:
 			return True
 		elif len(self.words) == 0:
-			import pdb
-			pdb.set_trace()
+			raise DisambiguationError("None of the matches are possible")
 		else:
 			return False
+			
+	def specifyObject(self, output):
+		pass
 			
 	def resumeMatching(self, match):
 		self.matches.insert(0, match)
@@ -124,22 +158,19 @@ class Finished(State):
 		
 class Talking(State):
 	request = "?"
-	def __init__(self, game, npc):
-		State.__init__(self, game)
+	def __init__(self, actor, npc):
+		State.__init__(self, actor)
 		self.npc = npc
 		
 	def handle(self, sentence, output):
 		if sentence == self.npc.ENDING:
-			self.end()
+			self.restoreState()
 			output.write(self.npc.responses[self.npc.CONVERSATION_ENDED], False)
 		else:
 			try:
 				self.npc.converseAbout(sentence, output)
 			except OutputClosed:
 				pass
-		
-	def end(self):
-		self.game.setState(self.oldState)
 		
 class Question(State):
 	request = "?"
@@ -148,9 +179,8 @@ class Question(State):
 		INVALID_ANSWER: "I'm not sure what that means."
 	}
 	
-	def __init__(self, game, handler):
-		State.__init__(self, game)
-		self.oldState = game.state
+	def __init__(self, actor, handler):
+		State.__init__(self, actor)
 		self.handler = handler
 		
 	def handle(self, sentence, output):

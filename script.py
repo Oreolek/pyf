@@ -69,10 +69,10 @@ class XMLScriptNode:
 
 		if self.node.hasAttribute('as'):
 			self.safe[self.node.getAttribute('as')] = o
-		try:
+			
+		if hasattr(o, 'XMLSetup'):
 			o.XMLSetup(self)
-		except AttributeError:
-			pass
+
 		return o
 		
 	def elementName(self):

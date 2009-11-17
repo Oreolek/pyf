@@ -24,17 +24,21 @@ class Inventory:
 		#: list of items in inventory
 		
 	def __iter__(self):
-		if self.parent.accessibleChildren():
-			return iter(self.list)
-		else:
-			return iter(())
+		for item in self.list:
+			if item.available:
+				yield item
 			
 	def __getitem__(self, i):
 		return self.list[i]
-			
-	def append(self, item):
-		if not item.proxy:
-			self.list.append(item)
 		
+	def __len__(self):
+		return len(self.list)
+			
 	def remove(self, item):
 		self.list.remove(item)
+		
+	def append(self, item):
+		self.list.append(item)
+
+	def __contains__(self, other):
+		return other in self.list

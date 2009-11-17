@@ -73,12 +73,12 @@ class GameWindow(wx.Frame):
 		string = self.input.newLine()
 		string = string.encode()
 		
-		self.html.appendLines(['<p>' + self.game.state.request +' '+ string + '</p>'] + self.game.input(string).lines)
+		self.html.appendLines(['<p>' + self.game.actor.state.request +' '+ string + '</p>'] + self.game.input(string).lines)
 		self.showLine()
 		
-		self.button.SetLabel(self.game.state.request)
+		self.button.SetLabel(self.game.actor.state.request)
 		
-		if self.game.state == pyf.states.Finished:
+		if self.game.actor.state == pyf.states.Finished:
 			self.input.Disable()
 		
 	def initGame(self):
@@ -92,7 +92,7 @@ class GameWindow(wx.Frame):
 		
 		self.SetTitle(self.game.name)
 		
-		self.button.SetLabel(self.game.state.request)
+		self.button.SetLabel(self.game.actor.state.request)
 		self.input.Enable()
 		
 	def loadGame(self, name):

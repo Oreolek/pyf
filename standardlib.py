@@ -39,7 +39,7 @@ words = (
 	Verb('cut'),
 	Touch('dig'),
 	Touch('fill'),
-	Verb('listen', 'listen to'),
+	Verb('listen to', 'listen'),
 	Touch('sit down on', 'sit down', 'sit'),
 	Touch('lie down on', 'lie down'),
 
@@ -80,13 +80,12 @@ words = (
 	Touch('drink', 'sip'),
 	Touch('eat'),
 	Touch('taste'),
-	Touch('turn on'),
-	Touch('turn off'),
-	Move('turn', 'twist', 'move'),
+	Touch('turn on', 'switch on'),
+	Touch('turn off', 'switch off'),
+	Move('turn', 'twist', 'move', 'switch'),
 	Touch('touch', 'rub', 'feel'),
 	Touch('wake'),
 
-	Verb('inventory', 'inv', 'i'),
 	Verb('wait', 'z'),
 
 	Direction('east', 'e'),
@@ -120,6 +119,7 @@ words = (
 	Internal('hint'),
 	Internal('score'),
 	Internal('transcript'),
+	Internal('inventory', 'inv', 'i'),
 
 	Ignore('a', 'an'),
 	Ignore('the'),

@@ -38,7 +38,7 @@ def makeTuple(other):
 	a tuple with one item. If can't turn into tuple, raise TypeError.'''
 	if type(other) == list:
 		return tuple(other)
-	elif type(other) == str or type(other) == str:
+	elif type(other) == str or type(other) == unicode:
 		return (other,)
 	elif type(other) == tuple:
 		return other

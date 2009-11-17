@@ -18,21 +18,42 @@ along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 from pyf import states
 
 def runGame(game):
-	'''Very basic command line interface for playing PyF games. "Quit" exits the game.'''
-	
+	'''Run game on the terminal interface.'''
 	print 'Type "quit" at any time to quit the game.'
 	interface = TerminalInterface(game)
 	interface.output(game.getIntro())
-	while game.state != states.Finished: # While the game is running
-		input = raw_input(game.state.request + ' ') # Get user input
+	while game.actor.state != states.Finished: # While the game is running
+		input = raw_input(game.actor.state.request + ' ') # Get user input
 		if input == 'quit': 
 			break # Exit game 
 		interface.input(input) # Pass player input to the game and print the output
 		
+def testGame(game, s):
+	'''Test game with s. Run commands in s and print output.
+	
+	@type	game:	Game
+	
+	@type	s:		str
+	@param	s:		A newline delimited string containing commands to run the game with.'''
+	
+	interface = TerminalInterface(game)
+	for line in s.split('\n'):
+		line = line.strip()
+		if line:
+			print game.actor.state.request + ' ' + line
+			interface.input(line)
+		
 import cgi, re
 		
 class TerminalInterface:
-	replace = {'<br />': "\n", '<br/>':"\n", '<b>': '-- ', '</b>': ' --'}
+	'''A basic command line interface for playing PyF games.'''
+	
+	replace = {'<br />': "\n", 
+		'<br/>':"\n", 
+		'<h4>': '-- ', 
+		'</h4>': ' --', 
+		'<h1>': '=== ',
+		'</h1>': ' ===',}
 	def __init__(self, game):
 		self.game = game
 
@@ -45,7 +66,9 @@ class TerminalInterface:
 	    
 		for tag in self.replace:
 			s = s.replace(tag, self.replace[tag])
-		return p.sub('', s)
+		s = p.sub('', s)
+		s = s.replace('\n ', '\n')
+		return s.strip()
 		
 	def output(self, output):
 		for line in output.lines:

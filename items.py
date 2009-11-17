@@ -32,18 +32,25 @@ class ItemMeta(handler.HandlerMeta):
 class Item(Handler):
 	'''Item is the base class for all the items in PyF game world.'''
 	
-	EVT_MOVED = 'itemMoved'
-	'''Called before the item is moved around in the game world.'''
-	EVT_INT_MOVED = 'itemIntMoved'
-	'''Called before the item is moved internally in its owner.'''
-	EVT_ITEM_RECEIVED = "itemReceived"
-	'''Called before an item dest is added to item's inventory.'''
-	EVT_ITEM_INT_RECEIVED = "itemIntReceived"
-	'''Called before an item is internally moved to item.'''
-	EVT_ITEM_HANDLE = "itemHandle"
-	EVT_OWNED_ITEM_HANDLE = "itemOwnedItemHandle"
+	EVT_MOVED = 'evtMoved'
+	'''Fired brefore item is moved around in the game world.'''
+	EVT_INT_MOVED = 'evtIntMoved'
+	'''Fired before item is moved internally to a new location.'''
+	EVT_ITEM_RECEIVED = "evtItemReceived"
+	'''Fired before an item dest is added to item's inventory.'''
+	EVT_ITEM_INT_RECEIVED = "evtItemIntReceived"
+	'''Fired before an item is internally moved to item.'''
+	EVT_ITEM_LOST = "evtItemLost"
+	'''Fired before an item is moved away from item.'''
+	EVT_ITEM_INT_LOST = "evtItemIntLost"
+	'''Fired before item is internally moved away from its location.'''
+	EVT_HANDLE = "evtHandle"
+	'''Fired before item is taken through the default input handling process.'''
+	EVT_OWNED_ITEM_HANDLE = "evtOwnedItemHandle"
+	'''Fired before an owned item is taken through the default input handling process.'''
 	
-	EVT_INIT = "itemInit"
+	EVT_INIT = "evtInit"
+	'''Fired after the class has been instantiated.'''
 	i = None
 	inits = {}
 	
@@ -57,9 +64,6 @@ class Item(Handler):
 	pronoun = 'it'
 	'''str - Allows the parser to refer to the object as its pronoun after
 	handling it.'''
-	
-	proxy = False
-	'''Proxy classes are blocked from inventory listings.'''
 	
 	inst = None
 	
@@ -126,7 +130,16 @@ class Item(Handler):
 		if type(self) == other:
 			return True
 		else:
-			id(self) == id(other)
+			return id(self) == id(other)
+			
+	@property
+	def available(self):
+		'''Proxy for self.accessible'''
+		return self.accessible
+		
+	@available.setter
+	def available(self, value):
+		self.accessible = value
 		
 	def accessibleChildren(self):
 		return True
@@ -155,7 +168,7 @@ class Item(Handler):
 	
 	def XMLWrapup(self, node):
 		Handler.XMLWrapup(self, node)
-		if not self.hasProp('Normal'):
+		if not props.Normal in self.props:
 			try:
 				f = node.getChild('ldesc')
 				self.addProp(props.Normal(long=f.getValue()))
@@ -194,13 +207,12 @@ class Item(Handler):
 	def updateAccessInfo(self, game):
 		'''Update access info for self.'''
 		cls = self.__class__
-		cls.i = self # deprecate?
 		cls.inst = self
 		
 		self.game = game
 		
 	def handleEvents(self, sentence):
-		self.dispatchEvent(self.EVT_ITEM_HANDLE)
+		self.dispatchEvent(self.EVT_HANDLE)
 		current = self
 		while current != None:
 			if current == sentence.actor:
@@ -221,7 +233,7 @@ class Item(Handler):
 				if sentence[:2] == ('*touch', '*self'):
 					if self.location != sentence.actor.location:
 						sentence.actor.intMove(self.location)
-						output.write(sentence.actor.responses['notNear'] % self.location.name, False, obj=sentence.actor)
+						output.write(sentence.actor.responses['notNear'] % self.location.name, False)
 					
 			self.handlePrivate(sentence,output)
 
@@ -229,7 +241,7 @@ class Item(Handler):
 				prop.intHandle(sentence, output)
 		except OutputClosed:
 			self.word.removeWord('*self')
-			raise OutputClosed("")
+			raise OutputClosed()
 		except SkipHandle:
 			pass
 		
@@ -248,7 +260,7 @@ class Item(Handler):
 		if self.owner == output.actor:
 			return
 		else:
-			if not self.hasProp('Mobile'):
+			if not props.Mobile in self.props:
 				raise PropError("Item is %s not mobile" % self.name)
 			if output.actor.canAccess(self):
 				self.Mobile.doTake()
@@ -259,7 +271,7 @@ class Item(Handler):
 		
 		name : str'''
 		for prop in self.props:
-			if prop.__class__.__name__ == name:
+			if prop.name == name:
 				return prop
 		
 		raise PropError("Item %s has no property %s." % (self.name, name))
@@ -300,33 +312,36 @@ class Item(Handler):
 		
 		dest : Item'''
 		try:
-			output = self.ownerGame().output
+			output = self.ownerGame.output
 		except GameError:
 			output = None
-		self.dispatchEvent(ItemMoveEvent(Item.EVT_MOVED, output, dest))
+		self.dispatchEvent(ItemMoveEvent(self.EVT_MOVED, output, dest))
 		if dest != None:
-			dest.dispatchEvent(ItemMoveEvent(Item.EVT_ITEM_RECEIVED, output, self))
-		self.intMove(dest)
-		try:
-			self.owner.inventory.remove(self)
-		except AttributeError:
-			pass
+			dest.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_RECEIVED, output, self))
+
+		if self.owner != None:
+			self.owner.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_LOST, output, dest), self)
 			
+		self.intMove(dest)
+			
+		if self.owner != None:
+			self.owner.inventory.remove(self)
+
 		self.owner = dest
 		
-		try:
+		if self.owner != None:
 			self.owner.inventory.append(self)
-		except AttributeError:
-			pass
-		
+			
 	def intMove(self, dest):
 		try:
-			output = self.ownerGame().output
+			output = self.ownerGame.output
 		except GameError:
 			output = None
-		self.dispatchEvent(ItemMoveEvent(Item.EVT_INT_MOVED, output, dest))
+		self.dispatchEvent(ItemMoveEvent(self.EVT_INT_MOVED, output, dest))
+		if self.location != None:
+			self.location.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_INT_LOST, output, dest), self)
 		if dest != None:
-			dest.dispatchEvent(ItemMoveEvent(Item.EVT_ITEM_INT_RECEIVED, output, self))
+			dest.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_INT_RECEIVED, output, self))
 			
 		self.location = dest
 		
@@ -354,14 +369,13 @@ class Item(Handler):
 		"""Called to check if other can self can access other in the game world. 
 		Default implementation returns other.availableTo(self)
 		
-		other : Item
+		@type	other:	Item
 		
-		returns : Boolean"""
+		@rtype	: Boolean"""
 		return other.availableTo(self)
 			
 	def availableTo(self, other):
-		'''Used internally by canAccess to check self is available to other. Override
-		to make item available.
+		'''Used internally by canAccess to check self is available to other.
 		
 		other : Item'''
 		if not self.accessible or self.owner == None:
@@ -374,192 +388,13 @@ class Item(Handler):
 			return other.canAccess(self.owner)
 		return False
 
-class Actor(Item):
-	'''Class for player characters. Handles sentences for examining the surroundings, 
-	moving, saving and loading the game.'''
-	name = 'yourself', 'player', 'self'
-	definite = 'yourself'
-	indefinite = 'yourself'
-	pronoun = None
-	
-	WAIT = 'wait'
-	INVENTORY = 'inventory'
-	NOT_A_DIRECTION = "notADirection"
-	'''Printed when player tries to move into a non-direction.'''
-	NO_DIRECTION = "noDirection"
-	"""Printed when player attempts to just walk."""
-	CANT_DO = "cantDo"
-	"""Printed when player can't use verb %s on noun %s."""
-	TOUCH = 'touch'
-	"""Printed when player feels a generic object."""
-	INVENTORY = 'inventory'
-	"""Printed when player requests to display the inventory."""
-	NO_VIOLENCE = 'noViolence'
-	"""Printed as a response to attacks against random nouns."""
-	UNHANDLED = "unhandled"
-	"""Printed as a final error message when every check fails."""
-	SOCIAL_UNHANDLED = "socialUnhandled"
-	"""Printed when player attempts a social action."""
-	SOCIAL_TOUCH_UNHANDLED = "socialUnhandled"
-	"""Printed when player attempts a social touching action."""
-	LISTEN = "listen"
-	"""Default response for "listen"."""
-	PUSH = "push"
-	"""Printed when player attempts to push things without a direction."""
-	NOT_NEAR = "notNear"
-	'''Printed when player needs to approach object before interacting with it.'''
-	ITEM_UNAVAILABLE = "itemUnavailable"
-	
-	responses = {
-		NOT_A_DIRECTION : "%s is not a direction.",
-		NO_DIRECTION : "You should specify which direction you want to walk to.",
-		TOUCH : "You feel nothing unexpected.",
-		CANT_DO : "You can't %s [self.definite].",
-		'itemUnavailable' : "You can't see anything like that here.",
-		'verbKnown' : "I only understood that you want to %s something.",
-		UNHANDLED : "I don't know what that means.",
-		NO_VIOLENCE : "Violence never solves anything.",
-		INVENTORY : "You're carrying %s.",
-		SOCIAL_UNHANDLED : "[self.definite] doesn't seem to notice.",
-		SOCIAL_TOUCH_UNHANDLED : "You doubt [self.pronoun] would like that very much.",
-		LISTEN : "You hear nothing unexpected.",
-		WAIT : 'Time passes.',
-		PUSH : "You'd have to specify where you want to push [self.definite].",
-		'saved' : "Saved!",
-		'loaded' : "Loaded!",
-		NOT_NEAR : '(first walking %s)'
-	}
-
-	LOOK = "look"
-	'''Verb used to get a description of the player's surroundings.'''
-	
-	def unhandledSentence(self, sentence, output):
-		if sentence[0] == '*verb':
-
-			if sentence[0] == 'go':
-				if len(sentence) == 2:
-					output.write(self.responses[self.NOT_A_DIRECTION] % (sentence[1].name))
-				elif len(sentence) == 1:
-					self.write(output, self.NO_DIRECTION)
-			
-			if len(sentence) == 2:
-				if sentence[1] == '*noun':
-					item = sentence[1].item
-					if self.canAccess(item):
-						if sentence[0] == 'push':
-							output.write(self.responses[self.PUSH], obj=item)
-						elif sentence[0] == "*social":
-							output.write(self.responses[self.SOCIAL_UNHANDLED], obj=item)
-						elif sentence[0] == "*socialtouch":
-							output.write(self.responses[self.SOCIAL_TOUCH_UNHANDLED], obj=item)
-						elif sentence[0] == 'touch':
-							self.write(output, self.TOUCH, obj = item)
-						elif sentence[0] == '*attack':
-							self.write(output, self.NO_VIOLENCE, obj=item)
-						output.write(self.responses[self.CANT_DO] % (sentence[0].name, sentence[1].item.indefinite))
-					else:
-						self.write(output, self.ITEM_UNAVAILABLE)
-				else:
-					output.write(self.responses['verbKnown'] % sentence[0].name)
-			elif len(sentence) == 1:
-				if sentence == 'z':
-					self.write(output, self.WAIT)
-				elif sentence == 'listen':
-					self.write(output, self.LISTEN)
-				
-		
-		self.write(output, 'unhandled')
-		
-	def input(self, output, sentence):
-		output.actor = self
-		sentence.actor = self
-	
-	def handlePrivate(self, sentence, output):
-		Item.handlePrivate(self,sentence,output)
-		self.handleMove(sentence, output)
-		
-		if sentence == self.LOOK:
-			output.target = self.owner
-			self.lookAround(output)
-		elif sentence == 'save':
-			self.game.pickle()
-			self.write(output, 'saved')
-		elif sentence == "restore":
-			self.game.unpickle()
-			self.write(output, 'loaded')
-			
-	def handleMove(self, sentence, output):
-		'''Called to handle movement requests.
-		
-		sentence : Sentence
-		output : Output'''
-		try:
-			d = self.getMoveDir(sentence)
-		except ValueError:
-			return
-		
-		room = self.owner.tryAccess(d, output)
-		self.move(room)
-		self.newLocation(output)
-		
-	def inv(self, output):
-		'''Write object inventory on output.
-
-		output : output'''
-		l = []
-		for item in self.inventory:
-			if item.hasProp('Mobile'):
-				l.append(item.Normal.getDesc('inv'))
-				
-		if len(l) == 0:
-			l.append('nothing')
-		output.write(self.responses[self.INVENTORY] % utils.naturalJoin(l, ', ', ' and '))
-
-		output.close()
-
-	
-		
-	def lookAround(self, output, short=False):
-		'''Write the current room description.
-		
-		output : Output
-		short : bool - Whether to write the short description of the room.'''
-		if short:
-			output.close()
-		else:
-			output.write(self.owner.Normal.getLong(), obj = self.owner)
-		
-	def newLocation(self, output):
-		'''Called to write description of a new location. If room has been visited before
-		will write the short description.
-		
-		output : Output'''
-		output.write('<b>' + self.owner.name + '</b>', False)
-
-		if self.owner.visited:
-			self.lookAround(output, True)
-		else:	
-			self.owner.visited = True
-			self.lookAround(output, False)
-
-			
-	def getMoveDir(self, sentence):
-		'''Get movement direction from sentence.
-		
-		sentence : Sentence'''
-		if sentence == 'go *direction':
-			return sentence[1]
-		elif sentence == '*direction':
-			return sentence[0]
-			
-		raise ValueError('Sentence "%s" has no movement direction.' % str(sentence))
 
 from handler import HandlerEvent
 
 class ItemMoveEvent(HandlerEvent):
 	def __init__(self, type, output, destination):
-		HandlerEvent.__init__(self, type, output)
 		self.destination = destination
+		HandlerEvent.__init__(self, type, output)
 
 class Male(Item):
 	pronoun = 'him'
@@ -570,10 +405,21 @@ class Female(Item):
 def _addExit(self, dir, event):
 	self.exits[dir] = event.target
 	
+def _actorMove(self, receive, event):
+	if type(event.target) == Actor:
+		if receive:
+			self.dispatchEvent(self.EVT_ENTERED)
+		else:
+			self.dispatchEvent(self.EVT_LOST)
+	
 class Room(Item):
-	'''instances attributes:
-		exits : dict - Dict containing room's exits. Key is Direction and value is a Room
-		or a Door.'''
+	'''Superclass for items with exits.'''
+	
+	EVT_ENTERED = "evtEntered"
+	'''Fired before actor enters room.'''
+	EVT_LEFT = "evtLeft"
+	'''Fired before actor leaves room.'''
+		
 	NO_EXIT = 'noExit'
 	ONLY_EXIT = 'onlyExit'
 	SEE_EXITS = "seeExits"
@@ -587,6 +433,8 @@ class Room(Item):
 		Item.__init__(self)
 		self.exits = getattr(self, 'exits', {})
 		self.visited = False
+		self.addEventListener(self.EVT_ITEM_RECEIVED, (self, True, _actorMove))
+		self.addEventListener(self.EVT_ITEM_LOST, (self, False, _actorMove))
 		
 	def hasExit(self, d):
 		'''Return true if room has exit d.
@@ -630,14 +478,9 @@ class Room(Item):
 		
 		d : Direction
 		output : Output'''
-		x = self.exit(d)
-
-		if type(x) == str or type(x) == unicode:
-			output.write(x)
-		elif x:
-			x = x.access(d, output)
-			return x
-		else:
+		try:
+			x = self.exit(d)
+		except KeyError:
 			s = self.responses[self.NO_EXIT]
 			l = len(self.exits.keys())
 			if l > 0:
@@ -646,6 +489,12 @@ class Room(Item):
 				else:
 					s += ' ' + self.exitString()
 			output.write(s)
+
+		if type(x) == str or type(x) == unicode:
+			output.write(x)
+		elif x:
+			x = x.access(d, output)
+			return x
 			
 	def exitString(self):
 		s = self.responses[self.SEE_EXITS] % utils.naturalJoin(self.exits.keys(), ', ', ' and ')
@@ -672,12 +521,9 @@ class Door(Room):
 		pass
 		
 	def access(self, d, output):
-		if self.hasProp('Openable'):
+		if props.Openable in self.props:
 			if self.Openable.closed:
-				if self.Openable.canOpen():
-					self.Openable.inlineOpen(output)
-				else:
-					self.write(output, self.NO_KEY)
+				self.Openable.inlineOpen(output)
 				
 		return self.exit(d).access(d, output)
 		
@@ -694,3 +540,5 @@ class Location(Item):
 		for item in self.inventory:
 			item.move(self.owner)
 			item.intMove(self)
+			
+from actor import *

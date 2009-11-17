@@ -25,6 +25,7 @@ class ScriptChildError(Exception):
 	
 class OutputClosed(Exception):
 	pass
+	   
 
 class OutputError(Exception):
 	pass
@@ -44,6 +45,9 @@ class AmbiguityError(Exception):
 		self.sentence = sentence
 		self.words = words
 		self.matches = matches
+		
+class DisambiguationError(Exception):
+	pass
 
 class StateError(Exception):
 	pass
@@ -55,4 +59,7 @@ class ScriptClassError(Exception):
 	pass
 	
 class SkipHandle(Exception):
+	pass
+	
+class InlineCodeError(Exception):
 	pass

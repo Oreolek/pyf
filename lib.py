@@ -60,14 +60,15 @@ class Lib(object):
 	def __str__(self):
 		return '\n'.join(self.words)
 		
-	def parse(self, s):
+	def __getitem__(self, name):
+		for word in self:
+			if word == name:
+				return word
+		
+	def parse(self, sentence):
 		"""Parse a sentence based on the words in this library.
 		
-		s : string to parse
-		
-		returns : Sentence"""
-		s = s.encode()
-		sentence = Sentence(s)
+		s : Sentence"""
 		sentence.lib = self
 		s = sentence.s # clean string
 
@@ -80,8 +81,6 @@ class Lib(object):
 				matches.append(match)
 		
 		sentence.applyMatches(matches)
-
-		return sentence
 		
 		
 class Word(object):
@@ -94,7 +93,7 @@ class Word(object):
 		words : a list of strings or a list"""
 		l = []
 		for word in words:
-			if isinstance(word, str):
+			if type(word) in (str, unicode):
 				l.append(word)
 			else:
 				for w in word:
@@ -155,7 +154,7 @@ class Word(object):
 		against the word.
 		
 		returns : bool'''
-		if isinstance(other, str) or isinstance(other, unicode):
+		if type(other) in (str, unicode):
 			return self.eqString(other)
 		
 		if issubclass(other.__class__, Word):
@@ -215,7 +214,7 @@ class Verb(Word):
 	pass
 class Touch(Verb):
 	pass
-class Attack(Verb):
+class Attack(Touch):
 	pass
 class Move(Touch):
 	pass
@@ -283,7 +282,8 @@ class Noun(Word):
 			l.append(self)
 			if self.adjective != None:
 				l.append(self.adjective)
-			s = l.parse(other)
+			s = Sentence(other)
+			l.parse(s)
 			if len(s) == 1 and s[0] == self:
 				return True
 			else:
@@ -323,6 +323,23 @@ class Sentence:
 		s = s.replace('.','')
 		
 		return s
+		
+	@property
+	def nouns(self):
+		l = []
+		for word in self:
+			if issubclass(type(word), Noun):
+				l.append(word)
+		return l
+		
+	@property
+	def verbs(self):
+		l = []
+		for word in self:
+			if issubclass(type(word), Verb):
+				l.append(word)
+		
+		return l
 		
 	def applyMatches(self, matches):
 		"""Apply list of Match instances to sentence. 
@@ -414,9 +431,9 @@ class Sentence:
 		l = Lib()
 		for word in self.words:
 			l.append(word)
-			
-		s = l.parse(s)
-		self.comp = s
+		
+		s = Sentence(s)
+		l.parse(s)
 		return s
 		
 	def __eq__(self, other):

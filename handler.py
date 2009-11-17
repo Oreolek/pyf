@@ -70,10 +70,10 @@ class Handler(object):
 	def XMLWrapup(self, node):
 		pass
 		
-	def write(self, output, name, close=True):
+	def write(self, output, name, close=True, obj = None):
 		'''Convenience function - write self.responses[name] to output with
 		obj set as self.owner.'''
-		output.write(self.responses[name], close, obj=self.owner)
+		output.write(self.responses[name], close=close, obj=obj)
 
 	def init(self):
 		"""Set up any user defined variables for item. Default implementation does nothing."""
@@ -82,21 +82,25 @@ class Handler(object):
 	def initFromScriptNode(self, node, dict):
 		pass
 		
+	@property
 	def ownerGame(self):
 		'''return : Game'''
 		try:
-			if self.game == None:
-				raise AttributeError("")
+			if self.game is None:
+				raise AttributeError("%s has no game" % self)
 			return self.game
 		except AttributeError:
 			raise GameError("Object %s hasn't been added to a game yet." % str(self))
 	
-	def dispatchEvent(self, event):
+	def dispatchEvent(self, event, output=None):
 		'''Dispatch an event in to the event flow.
 		
-		event : str / HandlerEvent - String is used to construct HandlerEvent with event as
-		type and standard attributes. HandlerEvent is used as is and should define current 
-		output object and type.'''
+		@type	event:	str / HandlerEvent
+		@param	event:	str - create new HandlerEvent with type event
+			HandlerEvent - passed to handlers as is
+			
+		@type	target:	Handler
+		@param	target: set as event target'''
 		
 		if isinstance(event, str):
 			type = event
@@ -106,9 +110,9 @@ class Handler(object):
 
 		event.target = self
 		
-		if event.output == None:
+		if event.output is None:
 			try:
-				event.output = self.ownerGame().output
+				event.output = self.ownerGame.actor.output
 			except GameError:
 				pass
 		
@@ -181,7 +185,7 @@ class Handler(object):
 		if self.address == None:
 			self.address = self.getAddress()
 
-		return self.ownerGame().script.getNode(self.address)
+		return self.ownerGame.script.getNode(self.address)
 			
 	def handle(self, sentence, output):
 		pass
@@ -206,7 +210,7 @@ class HandlerAccess:
 	def handle(self, sentence, output):
 		for handler in self.handlers:
 			if sentence == handler:
-				output.write(self.handlers[handler], self.close, obj=self.parent)
+				output.write(self.handlers[handler], self.close)
 
 	def __setitem__(self, name, value):
 		'''Set new handler.
