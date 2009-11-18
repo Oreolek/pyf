@@ -41,4 +41,11 @@ NOTE: 	Development versions of PyF might include setup scripts that
 		to your game folder.
 
 To install PyF run this in command prompt:
-python pyf/setup.py install
+python setup.py install
+
+=====================================================================
+============================ DOCUMENTATION ==========================
+=====================================================================
+
+You can run genDocs to generate the documentation for this version of
+PyF with Epydoc.

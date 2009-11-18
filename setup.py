@@ -17,7 +17,7 @@ along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 
 from distutils.core import setup
 setup(name="pyf",
-	version="0.6b",
+	version="0.7b",
 	description="Python IF library",
 	url="http://pyf.sourceforge.net/",
 	packages=['pyf','pyf.interface', 'pyf.props'],
