@@ -70,12 +70,16 @@ class Lib(object):
 		
 		s : Sentence"""
 		sentence.lib = self
-		s = sentence.s # clean string
 
 		matches = []
 		
 		for word in self:
-			match = word.containedIn(s)
+			if type(word) == Ignore:
+				for word in word:
+					sentence.s = sentence.s.replace(word + ' ', '')
+		
+		for word in self:
+			match = word.containedIn(sentence.s)
 			
 			if match:
 				matches.extend(match)
@@ -84,7 +88,7 @@ class Lib(object):
 		
 		
 class Word(object):
-	wildcards = []
+	'''Superclass for all words.'''
 	name = ''
 	words = ()
 	def __init__(self, *words):
@@ -114,17 +118,17 @@ class Word(object):
 		for word in words:
 			l.append(word.lower())
 		
-		l.extend(self.__class__.wildCards())
+		l.extend(self.__class__.wildcards())
 			
 		self.sortWords(l)
 		self.words = tuple(l)
 	
 	@classmethod
-	def wildCards(cls):
+	def wildcards(cls):
 		l = []
 		for base in cls.__bases__:
 			if base != Word and base != object:
-				l.extend(base.wildCards())
+				l.extend(base.wildcards())
 		l.append('*' + cls.__name__.lower())
 		return l
 		
@@ -196,44 +200,58 @@ class Word(object):
 				return True
 				
 		return False
-		
+	
+	@property
+	def isTitle(self):
+		return self.name.istitle()
+	
+	@property
 	def isPlural(self):
-		s = self.name.split(' of ')[0]
-		if s[-1] == 's':
-			return True
-		else:
-			return False
+		if not self.isTitle:
+			s = self.name.split(' of ')[0]
+			if s.endswith('s'):
+				return True
+			else:
+				return False
+		
+	@property
+	def verbPlural(self):
+		if not self.isTitle:
+			return self.name.endswith('s')
 		
 class Verb(Word):
-	pass
-class Touch(Verb):
-	pass
+	'''Superclass for all verbs.'''
+class CloseVerb(Word):
+	'''Used for verbs that require you to be close to something, but not necessarily touch 
+	it.'''
+class Touch(CloseVerb):
+	'''Used for verbs that require you to touch its object.'''
 class Attack(Touch):
-	pass
+	'''Used for aggressive verbs that require you to attack object.'''
 class Move(Touch):
-	pass
+	'''Used for verbs that attempt to move things.'''
 class Social(Verb):
-	pass
+	'''Used for verbs that attempt social interaction.'''
 class SocialTouch(Touch):
-	pass
+	'''Used for social touching verbs.'''
 class Answer(Social):
-	pass
+	'''Used for verbs that answer NPC's questions.'''
 class Direction(Word):
-	pass
+	'''Used for defining movement directions.'''
 	
 class Noun(Word):
+	'''Superclass for all nouns.'''
 	def __init__(self, *words):
 		Word.__init__(self, *words)
 		self.adjective = None
 		self.item = None
 		
-		# use Python's str.istitle to figure out if name is a title
-		if self.name.istitle():
-			self.definite = self.name
+		if self.isTitle:
+			self.definite = self.name	
 		else:
 			self.definite = "the %s" % self.name
 	
-		if self.isPlural(): # assume that the name is plural
+		if self.isPlural: # assume that the name is plural
 			self.indefinite = 'some %s' % self.name
 		else:
 			self.indefinite = None
@@ -288,17 +306,20 @@ class Noun(Word):
 			return Word.__eq__(self, other)
 	
 class Location(Noun):
-	pass
+	'''Used for nouns that define physical locations in a room.'''
 class Adjective(Word):
-	pass
+	'''Superclass for all adjectives.'''
 class Preposition(Word):
-	pass
+	'''Superclass for all prepositions.'''
 class Ignore(Word):
-	pass
+	'''Words for the parser to ignore during parsing.'''
 class Internal(Word):
 	'''Reserved for keywords like "save", "load", "again".'''
 class Unknown(Word):
-	pass
+	'''Instantiated for any words in the sentence that the parser doesn't understand.'''
+	@classmethod
+	def wildcards(cls):
+		return []
 
 class Sentence:
 	def __init__(self, s):
@@ -374,11 +395,12 @@ class Sentence:
 		for word in singleWords:
 			if word != '': # ignore empty strings in the beginning and end
 				u = Unknown(word)
-				u.removeWord('*unknown')
-				if word[0] == '*':
-					u.addWord(word)
+				'''if word[0] == '*':
+					u.addWord(word)'''
 				match = Match(word, self.s, u, self.s.index(word)-1)
-				if available(self.appliedMatches, match):
+
+				# see if word hasn't been matched by a better word
+				if available(self.appliedMatches, match): 
 					self.applyMatch(match) 
 					
 				

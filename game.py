@@ -104,9 +104,7 @@ class Game(Handler):
 		
 		
 	def setState(self, state):
-		'''DEPRECATED. Use 
-			Game.actor.state = State
-		instead.'''
+		'''DEPRECATED. Use Game.actor.state = State instead.'''
 		self.actor.state = state
 		
 	def end(self, output):
@@ -200,9 +198,7 @@ class Game(Handler):
 		self._actor = value
 		
 	def setActor(self, o):
-		'''DEPRECATED. Use 
-			Game.actor = Actor
-		instead.'''
+		'''DEPRECATED. Use Game.actor = Actor instead.'''
 		self.actor = o
 		
 	def addItem(self, item):

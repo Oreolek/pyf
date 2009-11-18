@@ -16,9 +16,9 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from .. props import Property, SwitchEvent
+from pyf.props import Property, SwitchEvent
 from general import Mobile
-from .. import utils
+from pyf import utils
 
 class Storage(Property):
 	"""Superclass for properties that are used to contain items."""

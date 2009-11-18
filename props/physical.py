@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from .. props import Property, SwitchEvent
+from pyf.props import Property, SwitchEvent
 from containers import Container
 from general import Mobile
 

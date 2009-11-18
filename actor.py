@@ -42,6 +42,8 @@ class Actor(Item):
 	'''Shown when the parser recognizes noun, but it's unavailable to actor.'''
 	VERB_UNKNOWN = "verbUnknown"
 	
+	NOT_EDIBLE = 'notEdible'
+	
 	SCORE = 'score'
 	'''Display score'''
 	
@@ -49,7 +51,7 @@ class Actor(Item):
 	"""Printed when player's input is an emptry string."""
 	
 	responses = {
-		NOT_A_DIRECTION : "[words[1].name] is not a direction.",
+		NOT_A_DIRECTION : "[sentence[1].name] is not a direction.",
 		NO_DIRECTION : "You should specify which direction you want to walk to.",
 		TOUCH : "You feel nothing unexpected.",
 		CANT_DO : "You can't [verbs[0].name] [self.definite].",
@@ -68,7 +70,8 @@ class Actor(Item):
 		'loaded' : "Loaded!",
 		SCORE : "You've earned %i points so far.",
 		NOT_NEAR : '(first walking %s)',
-		VERB_UNKNOWN : "You can't [sentence.words[0].name] things."
+		VERB_UNKNOWN : "You can't [sentence.words[0].name] things.",
+		NOT_EDIBLE : "[nouns[0].definite] [nouns[0].verbPlural and 'are' or 'is'] hardly edible.",
 	}
 
 	LOOK = "look"
@@ -88,7 +91,6 @@ class Actor(Item):
 		self.output = output
 		self.lastInput = sentence
 		output.actor = self
-		sentence.output = output
 		output.sentence = sentence
 		sentence.actor = self
 
@@ -138,14 +140,19 @@ class Actor(Item):
 			
 		if sentence[0] == '*verb':
 
-			if sentence[0] == 'go':
-				if len(sentence) == 2:
-					output.write(self.responses[self.NOT_A_DIRECTION])
-				elif len(sentence) == 1:
+			if len(sentence) == 1:
+				if sentence == 'go':
 					self.write(output, self.NO_DIRECTION)
-			
+				elif sentence == 'z':
+					self.write(output, self.WAIT)
+				elif sentence == 'listen':
+					self.write(output, self.LISTEN)
+
 			if len(sentence) == 2:
-				if sentence[1] == '*noun':
+				if sentence[0] == 'go':
+					output.write(self.responses[self.NOT_A_DIRECTION])
+			
+				elif sentence[1] == '*noun':
 					item = sentence[1].item
 					if self.canAccess(item):
 						if sentence[0] == 'push':
@@ -158,16 +165,13 @@ class Actor(Item):
 							output.write(self.responses[self.TOUCH])
 						elif sentence[0] == '*attack':
 							self.write(output, self.NO_VIOLENCE)
+						elif sentence[0] == 'eat':
+							self.write(output, self.NOT_EDIBLE)
 						output.write(self.responses[self.CANT_DO])
 					else:
 						self.write(output, self.ITEM_UNAVAILABLE)
 				else:
 					output.write(self.responses['verbKnown'])
-			elif len(sentence) == 1:
-				if sentence == 'z':
-					self.write(output, self.WAIT)
-				elif sentence == 'listen':
-					self.write(output, self.LISTEN)
 		
 		self.write(output, 'unhandled')
 		

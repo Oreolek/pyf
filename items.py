@@ -26,8 +26,8 @@ import lib, copy
 class ItemMeta(handler.HandlerMeta):
 	def __new__(cls, *args, **kwargs):
 		handler.HandlerMeta.__new__(cls, *args, **kwargs)
-		cls.definite = None
-		cls.indefinite = None
+		
+	
 
 class Item(Handler):
 	'''Item is the base class for all the items in PyF game world.'''
@@ -78,7 +78,7 @@ class Item(Handler):
 	props = ()
 	'''tuple - props to attach to the Item during instance 
 	construction. Property instances are deepcopied during construction.'''
-	accessible = True
+	available = True
 	'''bool - Controls whether the item is accessible in the game world. This
 	can be used to hide the object regardless of its real location in the game world.'''
 	owner = None
@@ -103,11 +103,11 @@ class Item(Handler):
 			self.initWord(cls.name)
 		
 		self.props = ()
-		self.inventory = inventory.Inventory(self)
+		self.inventory = inventory.Inventory()
 		'''list - contains all the items this item owns'''
 		
 		self.newprops = []
-		self.accessible = cls.accessible
+		self.available = cls.available
 		
 		if cls.owner != None:
 			self.owner = None
@@ -117,6 +117,8 @@ class Item(Handler):
 			
 		if cls.location != None:
 			self.intMove(cls.location)
+		else:
+			self.location = None
 
 		props = cls.props
 		if props.__class__ != tuple:
@@ -136,13 +138,13 @@ class Item(Handler):
 			return id(self) == id(other)
 			
 	@property
-	def available(self):
+	def accessible(self):
 		'''Proxy for self.accessible'''
-		return self.accessible
+		return self.available
 		
-	@available.setter
-	def available(self, value):
-		self.accessible = value
+	@accessible.setter
+	def accessible(self, value):
+		self.available = value
 		
 	def accessibleChildren(self):
 		return True
@@ -204,7 +206,7 @@ class Item(Handler):
 			self.indefinite = self.indefinite
 			self.word.indefinite = self.indefinite
 			
-		if self.word.isPlural():
+		if self.word.isPlural:
 			self.pronoun = 'them'
 			
 	def removeWord(self):
@@ -220,6 +222,17 @@ class Item(Handler):
 		cls.inst = self
 		
 		self.game = game
+	
+	@property
+	def absLocation(self):
+		if issubclass(type(self.location), Location):
+			return self.location
+		else:
+			if self.location != None:
+				return self.location.absLocation
+			else:
+				return None
+			
 		
 	def handleEvents(self, sentence):
 		self.dispatchEvent(self.EVT_HANDLE)
@@ -239,19 +252,18 @@ class Item(Handler):
 		try:
 			self.handleEvents(sentence)
 		
-			if self.location != self.owner:
+			if self.absLocation != sentence.actor.absLocation:
 				if sentence[:2] == ('*touch', '*self'):
-					if self.location != sentence.actor.location:
-						sentence.actor.intMove(self.location)
-						output.write(sentence.actor.responses['notNear'] % self.location.name, False)
+					sentence.actor.intMove(self.absLocation)
+					output.write(sentence.actor.responses['notNear'] % self.absLocation.name, False)
 					
 			self.handlePrivate(sentence,output)
 
 			for prop in self.props:
 				prop.intHandle(sentence, output)
-		except OutputClosed:
+		except OutputClosed, e:
 			self.word.removeWord('*self')
-			raise OutputClosed()
+			raise e
 		except SkipHandle:
 			pass
 		
@@ -261,8 +273,7 @@ class Item(Handler):
 		try:
 			return self.getProp(name)
 		except PropError:
-			pass
-		raise AttributeError("%s instance has no attribute '%s'" % (self.__class__.__name__, name))
+			raise AttributeError("%s instance has no attribute '%s'" % (self.__class__.__name__, name))
 		
 	def moveToActor(self, output):
 		'''Try to move the object to game.actor and write inline output accordingly.
@@ -325,12 +336,12 @@ class Item(Handler):
 			output = self.ownerGame.actor.output
 		except GameError:
 			output = None
-		self.dispatchEvent(ItemMoveEvent(self.EVT_MOVED, output, dest))
+		self.dispatchEvent(ItemMoveEvent(self.EVT_MOVED, output, self.owner, dest, self))
 		if dest != None:
-			dest.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_RECEIVED, output, self))
+			dest.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_RECEIVED, output, self.owner, dest, self))
 
 		if self.owner != None:
-			self.owner.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_LOST, output, dest), self)
+			self.owner.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_LOST, output, self.owner, dest, self))
 			
 		self.intMove(dest)
 			
@@ -347,12 +358,12 @@ class Item(Handler):
 			output = self.ownerGame.actor.output
 		except GameError:
 			output = None
-		self.dispatchEvent(ItemMoveEvent(self.EVT_INT_MOVED, output, dest))
+		self.dispatchEvent(ItemMoveEvent(self.EVT_INT_MOVED, output, self.location, dest, self))
 		if self.location != None:
-			self.location.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_INT_LOST, output, dest), self)
+			self.location.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_INT_LOST, output, self.location, dest, self))
 		if dest != None:
-			dest.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_INT_RECEIVED, output, self))
-			
+			dest.dispatchEvent(ItemMoveEvent(self.EVT_ITEM_INT_RECEIVED, output, self.location, dest, self))
+		
 		self.location = dest
 		
 	def canMove(self, other):
@@ -402,8 +413,13 @@ class Item(Handler):
 from handler import HandlerEvent
 
 class ItemMoveEvent(HandlerEvent):
-	def __init__(self, type, output, destination):
+	def __init__(self, type, output, source, destination, item):
 		self.destination = destination
+		'''Where item is being moved to.'''
+		self.source = source
+		'''Where item is being moved from.'''
+		self.item = item
+		'''What item is being moved. Does NOT always equal event.target.'''
 		HandlerEvent.__init__(self, type, output)
 
 class Male(Item):

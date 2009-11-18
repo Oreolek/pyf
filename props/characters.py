@@ -15,28 +15,28 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
-from .. props import Property
-from .. import states
+from pyf.props import Property
+from pyf import states
 
 class NPC(Property):
 	'''Defines item as something that you can have a conversation with.'''
 	
-	EVT_CONVERSATION_STARTED = "evtNPCConversationStarted"
+	EVT_CONVERSATION_STARTED = "evtConversationStarted"
 	'''Fired every time the player starts a conversation with NPC. Not fired when answering
 	questions outside a conversation.'''
-	EVT_CONVERSATION_ENDED = "evtNPCConversationEnded"
+	EVT_CONVERSATION_ENDED = "evtConversationEnded"
 	'''Fired every time the player ends a conversation with NPC. Not fired when answering
 	questions outside a conversation.'''
 	
-	CONVERSATION_STARTED = 'npcConversationStarted'
-	CONVERSATION_ENDED = "npcConversationEnded"
+	CONVERSATION_STARTED = 'conversationStarted'
+	CONVERSATION_ENDED = "conversationEnded"
 	
-	UNKNOWN_TOPIC = 'npcUnknownTopic'
-	UNKNOWN_ORDER = 'npcUnknownOrder'
-	UNKNOWN_QUESTION = 'npcUnknownQuestion'
-	HELP = 'npcHelp'
+	UNKNOWN_TOPIC = 'unknownTopic'
+	UNKNOWN_ORDER = 'unknownOrder'
+	UNKNOWN_QUESTION = 'unknownQuestion'
+	HELP = 'help'
 	
-	ANSWERED = "npcAnswered"
+	ANSWERED = "answered"
 	
 	ENDING = "end"
 	
@@ -52,8 +52,11 @@ class NPC(Property):
 	def __init__(self, topics={}, answers={}, orders={}):
 		Property.__init__(self)
 		self.topics = topics
+		'''Dict containing topics you can tell this NPC about.'''
 		self.answers = answers
+		'''Dict containing topics you can ask this NPC about.'''
 		self.orders = orders
+		'''Dict containing topics can ask this NPC to do.'''
 		
 	def handle(self, sentence, output):
 		s = sentence[:3]

@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from .. import handler
+from pyf import handler
 import copy
 from .. errors import PropError, MoveError
 # epydoc doesn't allow importing *
@@ -102,3 +102,4 @@ from containers import *
 from functionality import *
 from general import *
 from physical import *
+from technical import *

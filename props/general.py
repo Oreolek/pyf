@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from .. props import Property, SwitchEvent
+from pyf.props import Property, SwitchEvent
 import containers
 import  string
 
@@ -439,17 +439,20 @@ class Dark(Property):
 		for item in self.ownerGame.inventory:
 
 			if LightSource in item.props:
-				if self.ownerGame.actor.canAccess(item):
-					if not item.LightSource.inverse:
-						return True
-					else:
-						return False
+				if item.LightSource.on:
+					if self.owner.canAccess(item):
+						if not item.LightSource.inverse:
+							return True
+						else:
+							return False
 		
 		return self.light
 		
 class LightSource(Property):
 	'''When item is in a dark room, light it.'''
-	def __init__(self, inverse=False):
+	def __init__(self, on=True, inverse=False):
 		Property.__init__(self)
+		self.on = on
+		'''Whether it's currently emitting light.'''
 		self.inverse = inverse
 		'''True if item should suck light from container rather than emit it.'''

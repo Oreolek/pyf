@@ -17,8 +17,7 @@ along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 class Inventory:
-	def __init__(self, parent):
-		self.parent = parent
+	def __init__(self):
 		'''Item this inventory belongs to'''
 		self.list = []
 		'''list of items in inventory'''

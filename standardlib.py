@@ -22,7 +22,7 @@ words = (
 	Verb('go', 'walk'),
 	Verb('enter'),
 	Verb('exit'),
-	Verb('examine', 'x', 'look at', 'l', 'look'),
+	Touch('examine', 'x', 'look at', 'l', 'look'),
 	Move('take', 'get', 'pick up'),
 	Move('drop'),
 	Move('give'),
@@ -35,7 +35,7 @@ words = (
 	Touch('blow'),
 	Verb('burn'),
 	Touch('buy', 'purchase'),
-	Touch('climb'),
+	Touch('climb on', 'climb'),
 	Verb('cut'),
 	Touch('dig'),
 	Touch('fill'),
@@ -60,6 +60,8 @@ words = (
 	Verb('jump'),
 	Verb('wake up'),
 	Verb('wave'),
+	
+	Move('press'),
 
 	Social('talk to', 'talk', 'speak to', 'speak with', 'speak'),
 	Social('answer', 'reply'),
@@ -84,7 +86,7 @@ words = (
 	Touch('turn off', 'switch off'),
 	Move('turn', 'twist', 'move', 'switch'),
 	Touch('touch', 'rub', 'feel'),
-	Touch('wake'),
+	Touch('wake', 'wake up'),
 
 	Verb('wait', 'z'),
 
@@ -130,7 +132,7 @@ words = (
 )
 
 def standardLib():
-	'''Return standard PyF library.'''
+	'''Return a new Lib object with the default word definitions.'''
 	l = Lib()
 	l.append(*words)
 	

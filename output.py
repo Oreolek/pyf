@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import types
+import types, utils
 from errors import *
 
 class Output:
@@ -120,7 +120,7 @@ class Output:
 				count -= 1
 				if count == 0:
 					try:
-						out += eval(codeBuffer, {'self': obj, 'nouns':nouns, 'items':items, 'verbs':verbs, 'sentence':sentence, 'actor':actor})
+						out += eval(codeBuffer, {'self': obj, 'nouns':nouns, 'items':items, 'verbs':verbs, 'sentence':sentence, 'actor':actor, 'utils':utils})
 					except Exception, e:
 						raise InlineCodeError('Error in inline code: [%s] in \n %s \n' % (codeBuffer, s) + str(e))
 					codeBuffer = ''

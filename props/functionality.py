@@ -81,7 +81,7 @@ class Seat(Property):
 					self.lie(output)
 					
 		if self.platform:
-			if sentence == ("stand", 'on', '*self') or sentence == ('climb', 'on', '*self'):
+			if sentence == ('climb', '*self'):
 				self.climb(output)
 			elif sentence.actor.location == self.owner:
 				if sentence == ("down",) or sentence == ("get", 'down') or sentence == ("get", 'down', 'from', '*self'):
@@ -146,70 +146,7 @@ class Seat(Property):
 	def cantStand(self, output):
 		output.write(self.responses[self.CANT_STAND])
 
-class Appliance(Property):
-	'''Implements funcionality typical for electronic devices. Allows turning item on and
-	off.'''
-	EVT_STATE_ON = 'evtStateOn'
-	'''Fired when object is turned on or off.'''
-	
-	TURNED_ON = "turnedOn"
-	"""Appended to object's long description when it's turned on."""
-	TURNED_OFF = "turnedOff"
-	"""Appended to object's long description when it's turned off."""
-	TURN_ON = "turnOn"
-	"""Printed when player turns object on."""
-	ALREADY_ON = "alreadyTurnedOn"
-	"""Printed when item is already turned on."""
-	TURN_OFF = "turnOff"
-	"""Printed when player turns object off."""
-	ALREADY_OFF = "alreadyTurnedOff"
-	"""Printed when item is already turned off."""
-	
-	responses = {
-		'turnedOff' : "It's turned off.",
-		'turnedOn' : "It's turned on.",
-		'turnOn' : 'You turn on [self.definite].',
-		'alreadyTurnedOn' : "It's already turned on.",
-		'turnOff' : 'You turn off [self.definite].', 
-		'alreadyTurnedOff' : "It's already turned off."
-	}
-	def __init__(self, on=False):
-		Property.__init__(self)
-		self.on = on
-	
-	def getDesc(self, type, desc):
-		if type == 'long':
-			if self.on:
-				return self.responses['turnedOn']
-			else:
-				return self.responses['turnedOff']
-				
-	def handle(self, sentence, output):
-		s = sentence
-		if s == ('turn', '*self', 'on') or s == ('turn on', '*self',):
-			self.turnOn(output)
-		elif s == ('turn', '*self', 'off') or s == ('turn off', '*self',):
-			self.turnOff(output)
-				
-	def turnOn(self, output):
-		if not self.on:
-			self.doTurnOn()
-			self.write(output, 'turnOn')
-		else:
-			self.write(output, 'alreadyTurnedOn')
-			
-	def doTurnOn(self):
-		self.dispatchEvent(SwitchEvent(self.EVT_STATE_ON, True))
-		self.on = True
-			
-	def turnOff(self, output):
-		if self.on:
-			self.doTurnOff()
-			self.write(output, 'turnOff')
-			
-	def doTurnOff(self):
-		self.dispatchEvent(SwitchEvent(self.EVT_STATE_ON, False))
-		self.on = False
+
 		
 class Wearable(Property):
 	"""Defines item as something that can be worn."""

@@ -100,8 +100,8 @@ class Handler(object):
 		@param	event:	str - create new HandlerEvent with type event
 			HandlerEvent - passed to handlers as is
 			
-		@type	target:	Handler
-		@param	target: set as event target'''
+		@type 	output:	Output
+		@param	output:	Output instance to associate with this event.'''
 		
 		if isinstance(event, str):
 			type = event
