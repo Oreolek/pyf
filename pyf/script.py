@@ -61,9 +61,9 @@ class XMLScriptNode:
 		except ScriptClassError:
 			return
 			
-		try:
+		if hasattr(cls, '__call__'):
 			o = cls()
-		except TypeError:
+		else:
 			cls.XMLSetup(self)
 			return cls
 

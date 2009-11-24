@@ -25,13 +25,19 @@ class Actor(Item):
 	INVENTORY = 'inventory'
 	"""Printed when player requests to display the inventory."""
 	NO_VIOLENCE = 'noViolence'
-	"""Printed as a response to attacks against random nouns."""
+	"""Message to attacks against random nouns."""
+	NO_VIOLENCE_CREATURE = 'noViolenceCreature'
+	"""Message to attacks against random creatures."""
 	UNHANDLED = "unhandled"
 	"""Printed as a final error message when every check fails."""
-	SOCIAL_UNHANDLED = "socialUnhandled"
-	"""Printed when player attempts a social action."""
-	SOCIAL_TOUCH_UNHANDLED = "socialUnhandled"
-	"""Printed when player attempts a social touching action."""
+	SOCIAL = "social"
+	"""Shown when player attempts a social action on a non-creature."""
+	SOCIAL_TOUCH = "socialTouch"
+	"""Printed when player attempts a social touching action on a non-creature."""
+	SOCIAL_CREATURE = "socialCreature"
+	"""Shown when player attempts a social action on a creature."""
+	SOCIAL_TOUCH_CREATURE = "socialTouchCreature"
+	"""Printed when player attempts a social touching action on a creature."""
 	LISTEN = "listen"
 	"""Default response for "listen"."""
 	PUSH = "push"
@@ -59,10 +65,13 @@ class Actor(Item):
 		ITEM_UNAVAILABLE : "You can't see anything like that here.",
 		'verbKnown' : "I only understood that you want to [verbs[0].name] something.",
 		UNHANDLED : "I don't know what that means.",
-		NO_VIOLENCE : "Violence never solves anything.",
+		NO_VIOLENCE : "Violence isn't going to help.",
+		NO_VIOLENCE_CREATURE : "[nouns[0].definite] probably wouldn't like that very much.",
 		INVENTORY : "You're carrying %s.",
-		SOCIAL_UNHANDLED : "[self.definite] doesn't seem to notice.",
-		SOCIAL_TOUCH_UNHANDLED : "You doubt [self.pronoun] would like that very much.",
+		SOCIAL : "[self.definite] doesn't seem to notice.",
+		SOCIAL_TOUCH : "Getting affectionate with inanimate objects isn't going to help you here.",
+		SOCIAL_CREATURE : "[self.definite] might not like that so much.",
+		SOCIAL_TOUCH : "You doubt [self.definite] would like that very much.",
 		LISTEN : "You hear nothing unexpected.",
 		WAIT : 'Time passes.',
 		PUSH : "You'd have to specify where you want to push [self.definite].",
@@ -150,23 +159,34 @@ class Actor(Item):
 
 			if len(sentence) == 2:
 				if sentence[0] == 'go':
-					output.write(self.responses[self.NOT_A_DIRECTION])
-			
+					if sentence[1] != '*direction':
+						output.write(self.responses[self.NOT_A_DIRECTION])
+				
+				elif sentence[1] == '*creature':
+					if sentence[0] == '*socialtouch':
+						output.write(self.responses[self.SOCIAL_TOUCH_CREATURE])
+					elif sentence[0] == '*social':
+						output.write(self.responses[self.SOCIAL_CREATURE])
+						
 				elif sentence[1] == '*noun':
 					item = sentence[1].item
 					if self.canAccess(item):
 						if sentence[0] == 'push':
 							output.write(self.responses[self.PUSH])
-						elif sentence[0] == "*social":
-							output.write(self.responses[self.SOCIAL_UNHANDLED])
 						elif sentence[0] == "*socialtouch":
-							output.write(self.responses[self.SOCIAL_TOUCH_UNHANDLED])
+							output.write(self.responses[self.SOCIAL_TOUCH])
+						elif sentence[0] == "*social":
+							output.write(self.responses[self.SOCIAL])
 						elif sentence[0] == 'touch':
 							output.write(self.responses[self.TOUCH])
 						elif sentence[0] == '*attack':
-							self.write(output, self.NO_VIOLENCE)
+							if sentence[1] == '*creature':
+								self.write(output, self.NO_CREATURE_VIOLENCE)
+							else:
+								self.write(output, self.NO_VIOLENCE)
 						elif sentence[0] == 'eat':
 							self.write(output, self.NOT_EDIBLE)
+
 						output.write(self.responses[self.CANT_DO])
 					else:
 						self.write(output, self.ITEM_UNAVAILABLE)

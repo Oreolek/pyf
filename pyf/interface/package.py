@@ -1,4 +1,4 @@
-'''Classes for distributing and opening Py-Fi formatted zip-files.'''
+'''Classes for distributing and opening PyF formatted zip-files.'''
 
 """This file is part of PyF.
 
@@ -20,7 +20,7 @@ import os, os.path
 from zipfile import ZipFile
 
 class Importer:
-	'''Importer class is used for running Py-Fi formatted zip-files.'''
+	'''Importer class is used for running PyF formatted zip-files.'''
 	
 	def __init__(self, file):
 		self.file = file
@@ -46,7 +46,7 @@ class Importer:
 		return self.file.open(*args, **kwargs)
 		
 class Packer:
-	'''Packer class is used for creating Py-Fi formatted zip-files.'''
+	'''Packer class is used for creating PyF formatted zip-files.'''
 	
 	@classmethod
 	def pack(cls, path, name="game.pyf"):

@@ -21,15 +21,31 @@ import handler, script
 from errors import *
 
 class TimedEvent(object):
+	'''A basic timed event that will be executed on every turn until done is
+	set to true.'''
+	def __init__(self, function):
+		'''	
+		@type	function	: callable
+		@param	function	: Function that should be called.'''
+		
+		self.done = False
+		'''True if event should be unqueued after handling.'''
+		self.function = function
+		'''Function that should be called.'''
+		
+	def handle(self, sentence, output):
+		self.function(sentence, output)
+
+class DelayedEvent(TimedEvent):
+	'''Event that's executed after a certain amount of turns has passed.'''
 	def __init__(self, function, i):
+		TimedEvent.__init__(self, function)
 		self.i = i
 		'''Turns after which function should be executed. 0 means function is executed
 		immediately.'''
 		
-		self.function = function
-		'''Function to execute after timer reaches i.'''
 		self.count = 0
-		self.done = False
+		'''Amount of turns that has passed for this object.'''
 		
 	def handle(self, sentence, output):
 		self.count += 1
@@ -41,8 +57,9 @@ class TimedEvent(object):
 			self.done = True
 
 class Scene(object):
+	'''A queue of messages to be shown.'''
 	scenes = {}
-	def __init__(self, name):
+	def __init__(self):
 		self.l = []
 		
 	def handle(self, sentence, output):

@@ -15,14 +15,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>."""
 
-import lib, states, script, items, output
+import lib, states, script, items, output, standardlib
 from handler import Handler, HandlerEvent
 from errors import *
 
 class Game(Handler):
 	'''Superclass for any PyF games.'''
 	
-	lib = lib.standardLib()
+	lib = standardlib.standardLib()
 	'''Lib to use for parsing user input.'''
 	inventory = []
 	'''List of all items currently in the game.'''

@@ -25,7 +25,9 @@ class ScriptChildError(Exception):
 	
 class OutputClosed(Exception):
 	pass
-	   
+
+class InventoryError(Exception):
+	pass
 
 class OutputError(Exception):
 	pass

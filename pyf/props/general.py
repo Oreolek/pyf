@@ -18,6 +18,7 @@ along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from pyf.props import Property, SwitchEvent
+from pyf.errors import *
 import containers
 import  string
 
@@ -25,7 +26,7 @@ class Normal(Property):
 	'''Display descriptions for objects.'''
 	EVT_EXAMINED = 'evtExamined'
 	
-	def __init__(self, long=None, short=None, inv=None):
+	def __init__(self, long=None, short=None, inv=None, descIn={}):
 		Property.__init__(self)
 		self.long = long
 		'''Long description of the object.'''
@@ -34,6 +35,9 @@ class Normal(Property):
 		long description.'''
 		self.inv = inv
 		'''Invoked when player examines inventory.'''
+		self.descIn = descIn
+		'''A dict containing specific descriptions for the object if contained in another
+		object. Key is the container object name, and value the description.'''
 		
 	def handle(self, sentence, output):
 		if sentence == ('examine', '*self'):
@@ -46,10 +50,7 @@ class Normal(Property):
 		self.dispatchEvent(self.EVT_EXAMINED)
 		
 	def init(self):
-		if self.short == None:
-			self.short = self.owner.indefinite
-		if self.inv == None:
-			self.inv = self.owner.indefinite
+		pass
 		
 	def removeShortDesc(self, s):
 		return s.remove(self.descToken(), '')
@@ -86,12 +87,15 @@ class Normal(Property):
 	def fillDescription(self, s, target):
 		d = {}
 		for item in target.inventory:
-			try:
-				d[item.name] = item.Normal.getFlat('short')
-				if d[item.name] == None:
-					d[item.name] = ''
-			except AttributeError:
-				pass
+			d[item.name] = ''
+			if Normal in item.props:
+				if self.owner.owner != None:
+					if self.owner.owner.name in item.Normal.descIn:
+						d[item.name] = item.Normal.descIn[item.owner.owner.name]
+				if item.Normal.short != None:
+					d[item.name] = item.Normal.getFlat('short')
+				else:
+					d[item.name] = item.indefinite
 		
 		f = DescFormatter()
 		return f.format(s, d)
@@ -124,26 +128,28 @@ class Mobile(Property):
 	EVT_DROPPED = 'evtDropped'
 	'''Fired before an actor drops owner.'''
 	
-	TAKEN = "mobileTaken"
+	TAKEN = "taken"
 	'''Printed when player succesfully takes object.''' 
-	DROPPED = "mobileDropped"
+	DROPPED = "dropped"
 	'''Printed when player succesfully drops object.''' 
-	ALREADY_TAKEN = "mobileAlreadyTaken"
+	ALREADY_TAKEN = "alreadyTaken"
 	'''Printed if player tries to take an object when they're already carrying it. ''' 
-	ALREADY_DROPPED = "mobileAlreadyDropped"
+	ALREADY_DROPPED = "alreadyDropped"
 	'''Printed if player tries to drop an object when they're not carrying it. ''' 
 	
-	CHILDREN_UNACCESSIBLE = 'mobileChildrenUnaccessible'
-	'''Prints an error message when player attempts to drop this object in a room where it
-	might get lost.'''
-	NOT_TAKEABLE = 'mobileNotTakeable'
-	'''Printed when player attempts to take an object set as untakeable.'''
-	NOT_DROPPABLE = 'mobileNotDroppable'
-	'''Printed when player attempts to drop an object set as undroppable.'''
+	CHILDREN_UNACCESSIBLE = 'childrenUnaccessible'
+	'''Shown when player attempts to drop this object in a room where it
+	might not be available.'''
+	NOT_TAKEABLE = 'notTakeable'
+	'''Shown when player attempts to take an object set as untakeable.'''
+	NOT_DROPPABLE = 'notDroppable'
+	'''Shown when player attempts to drop an object set as undroppable.'''
 	PUSHED = 'pushed'
-	'''Prints output when player pushes object into a location in the current room.'''
+	'''Shown when player pushes object into a location in the current room.'''
 	ALREADY_PUSHED = 'alreadyPushed'
-	'''Prints output when the object is already where player is trying to push it.'''
+	'''Shown when the object is already where player is trying to push it.'''
+	NOT_MOVABLE = 'notMovable'
+	'''Shown when player tries to move an object that's not movable.'''
 	
 	responses = {
 		TAKEN : 'Taken.',
@@ -154,15 +160,19 @@ class Mobile(Property):
 		NOT_TAKEABLE : "That's not something you want to be carrying around.",
 		NOT_DROPPABLE : "That's not something you want to leave lying around.",
 		PUSHED : "You push [self.definite] [nouns[1].name].",
-		ALREADY_PUSHED : "[self.definite] is already pushed [nouns[0].name]."
+		ALREADY_PUSHED : "[self.definite] is already pushed [nouns[0].name].",
 	}
 	
 	def __init__(self, droppable=True, takeable=True, movable=True, autoDescribe=True):
 		Property.__init__(self)
 		self.droppable=droppable
+		'''True if item can be dropped.'''
 		self.takeable = takeable
+		'''True if item can be taken.'''
 		self.dropped = False
+		'''True if item is not in its original location.'''
 		self.movable = movable
+		'''True if player can push this.'''
 		self.autoDescribe = autoDescribe
 		
 	def handle(self, sentence, output):
@@ -170,17 +180,20 @@ class Mobile(Property):
 			self.take(output)
 		elif sentence == ('drop', '*self'):
 			self.drop(output)
-		elif sentence == ("push", '*self', '*location'):
+		elif sentence[:2] == ("push", '*self') and sentence[2] in ('*location', '*direction'):
 			self.push(sentence[2].item, output)
 			
 	def push(self, location, output):
 		if self.movable:
-			if self.owner.owner != output.actor:
-				if self.owner.location != location:
-					self.doPush(location)
-					output.write(self.responses[self.PUSHED])
-				else:
-					output.write(self.responses[self.ALREADY_PUSHED])
+			if location.word == '*location':
+				if self.owner.owner != output.actor:
+					if self.owner.location != location:
+						self.doPush(location)
+						output.write(self.responses[self.PUSHED])
+					else:
+						output.write(self.responses[self.ALREADY_PUSHED])
+		else:
+			self.write(self.NOT_MOVABLE)
 				
 	def doPush(self, location):
 		self.owner.intMove(location)
@@ -277,7 +290,7 @@ class Openable(Property):
 		self.locked = locked
 		self.key = key
 		
-		self.addEventListener(self.EVT_STATE_OPEN, (self, _opened))
+		#self.addEventListener(self.EVT_STATE_OPEN, (self, _opened))
 		
 	def init(self):
 		self.owner.addEventListener(self.owner.EVT_OWNED_ITEM_HANDLE, (self, _openableHandle))

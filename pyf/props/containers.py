@@ -17,7 +17,7 @@ along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from pyf.props import Property, SwitchEvent
-from general import Mobile
+from general import Mobile, Normal
 from pyf import utils
 
 class Storage(Property):
@@ -27,11 +27,11 @@ class Storage(Property):
 	def describables(self, s):
 		l = []
 		for item in self.owner.inventory:
-			if Mobile in item.props:
+			if Mobile in item.props and Normal in item.props:
 				if item.Mobile.autoDescribe:
 					token = item.Normal.descToken()
-					#if token not in s:
-					l.append(token)
+					if token not in s:
+						l.append(token)
 		
 		return l
 		

@@ -95,34 +95,45 @@ class Word(object):
 		"""Construct Word with *words specified as synonyms.
 		
 		words : a list of strings or a list"""
-		l = []
-		for word in words:
-			if type(word) in (str, unicode):
-				l.append(word)
-			else:
-				for w in word:
-					l.append(w)
-
-		for word in l:
-			s = word
-			s = s.replace('the ', '')
-			s = s.replace('a ', '')
-			s = s.replace('an ', '')
-			if s != word:
-				l.append(s)
-			
-		words = l
-		self.name = words[0]
 		
-		l = []
-		for word in words:
-			l.append(word.lower())
-		
-		l.extend(self.__class__.wildcards())
-			
-		self.sortWords(l)
-		self.words = tuple(l)
+		if words:
+			self.name = words
 	
+	@property
+	def name(self): 
+		if self.words:
+			return self.words[0]
+		else:
+			return None
+
+	@name.setter
+	def name(self, value):
+		self.setWords(value)
+		
+	def setWords(self, value):
+		if value:
+			words = value
+			l=[]
+			for word in words:
+				if type(word) in (str, unicode):
+					l.append(word)
+				else:
+					for w in word:
+						l.append(w)
+
+			for word in l:
+				s = word
+				s = s.replace('the ', '')
+				s = s.replace('a ', '')
+				s = s.replace('an ', '')
+				if s != word:
+					l.append(s)
+			
+			l.extend(self.__class__.wildcards())
+			self.words = tuple(l)
+		else:
+			self.words = value
+
 	@classmethod
 	def wildcards(cls):
 		l = []
@@ -221,18 +232,17 @@ class Word(object):
 		
 class Verb(Word):
 	'''Superclass for all verbs.'''
-class CloseVerb(Word):
-	'''Used for verbs that require you to be close to something, but not necessarily touch 
-	it.'''
+class CloseVerb(Verb):
+	'''Used for verbs that require you to be close to something.'''
 class Touch(CloseVerb):
 	'''Used for verbs that require you to touch its object.'''
 class Attack(Touch):
 	'''Used for aggressive verbs that require you to attack object.'''
 class Move(Touch):
 	'''Used for verbs that attempt to move things.'''
-class Social(Verb):
+class Social(CloseVerb):
 	'''Used for verbs that attempt social interaction.'''
-class SocialTouch(Touch):
+class SocialTouch(Touch, Social):
 	'''Used for social touching verbs.'''
 class Answer(Social):
 	'''Used for verbs that answer NPC's questions.'''
@@ -246,23 +256,37 @@ class Noun(Word):
 		self.adjective = None
 		self.item = None
 		
-		if self.isTitle:
-			self.definite = self.name	
+	@property
+	def name(self):
+		if self.words:
+			return self.words[0]
 		else:
-			self.definite = "the %s" % self.name
+			return None
 	
-		if self.isPlural: # assume that the name is plural
-			self.indefinite = 'some %s' % self.name
-		else:
-			self.indefinite = None
-			for consonant in consonants:
-				if self.name.startswith(consonant):
-					self.indefinite = 'a %s' % self.name
-					break
-				
-			if self.indefinite == None:
-				self.indefinite = 'an %s' % self.name
+	@name.setter
+	def name(self, value):
+		self.setWords(value)
 		
+		if self.name:
+			if self.isTitle:
+				self.definite = self.name
+			else:
+				self.definite = "the %s" % self.name
+	
+			if self.isPlural: # assume that the name is plural
+				self.indefinite = 'some %s' % self.name
+			else:
+				self.indefinite = None
+				for consonant in consonants:
+					if self.name.startswith(consonant):
+						self.indefinite = 'a %s' % self.name
+						break
+				
+				if self.indefinite == None:
+					self.indefinite = 'an %s' % self.name
+		else:
+			self.definite = None
+			self.indefinite = None
 		
 	def matchString(self, word, s):
 		"""Recursive function for matching argument word and all Noun instance's
@@ -307,6 +331,13 @@ class Noun(Word):
 	
 class Location(Noun):
 	'''Used for nouns that define physical locations in a room.'''
+class Creature(Noun):
+	'''Used for all living creatures.'''
+class Person(Creature):
+	'''Used for people.'''
+class Animal(Creature):
+	'''Used for animals.'''
+
 class Adjective(Word):
 	'''Superclass for all adjectives.'''
 class Preposition(Word):
@@ -322,6 +353,7 @@ class Unknown(Word):
 		return []
 
 class Sentence:
+	'''Container object for word instances.'''
 	def __init__(self, s):
 		self.s = Sentence.sanitize(s)
 		
@@ -345,7 +377,7 @@ class Sentence:
 	def nouns(self):
 		l = []
 		for word in self:
-			if issubclass(type(word), Noun):
+			if word == '*noun':
 				l.append(word)
 		return l
 		
@@ -353,7 +385,7 @@ class Sentence:
 	def verbs(self):
 		l = []
 		for word in self:
-			if issubclass(type(word), Verb):
+			if word == '*verb':
 				l.append(word)
 		
 		return l
@@ -566,5 +598,3 @@ consonants = (
 	'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'z'
 )
 '''matched against the word's beginning to get the article of the word'''
-
-from standardlib import standardLib # included here for convenience

@@ -37,10 +37,10 @@ class Seat(Property):
 	EVT_CLIMBED = "evtClimbed"
 	'''Fired before actor climbs on object.'''
 	
-	SEATED = 'seatSeated'
-	STOOD = 'seatStood'
-	LAIN = 'seatLain'
-	CANT_STAND = 'seatCantStand'
+	SEATED = 'seated'
+	STOOD = 'stood'
+	LAIN = 'lain'
+	CANT_STAND = 'cantStand'
 	CLIMBED = "climbed"
 	'''Shown when player stands on item.'''
 	

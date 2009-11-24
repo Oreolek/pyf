@@ -113,9 +113,9 @@ class Button(Property):
 class Lever(Property):
 	"""A simple lever.
 	
-		push *self	:	set pushed as True
-		pull *self	:	set pushed as False
-		turn *self	:	switch it"""
+	push *self	:	set pushed as True
+	pull *self	:	set pushed as False
+	turn *self	:	switch it"""
 	
 	EVT_STATE_TURNED = 'evtStateSwitched'
 	'''Fired before the lever is moved. '''
@@ -139,11 +139,11 @@ class Lever(Property):
 		CANT_TURN : "You'll have to specify which direction to turn it in.",
 	}
 	
-	def __init__(self, pushed=False, turnable=True):
+	def __init__(self, pushed=True, turnable=True):
 		self.pushed = pushed
 		'''Its current position.'''
 		self.turnable = turnable
-		'''True if player can use 'switch *self' to switch its state.'''
+		'''True if player can use 'turn *self' to switch its state.'''
 		
 	def handle(self, sentence, output):
 		if sentence == ('push', '*self'):

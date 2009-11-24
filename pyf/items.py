@@ -18,19 +18,52 @@ along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 
 import utils, inventory, new, handler, props
 
-from handler import Handler
+from handler import Handler, HandlerMeta
 from errors import *
 
 import lib, copy
 
-class ItemMeta(handler.HandlerMeta):
-	def __new__(cls, *args, **kwargs):
-		handler.HandlerMeta.__new__(cls, *args, **kwargs)
-		
-	
+class PrivateAccessor(object):
+	'''A simple proxy for private variables.'''
+	def __init__(self, name):
+		self.name = name
+	def __get__(self, instance, owner):
+		return getattr(instance, self.name)
+			
+	def __set__(self, instance, value):
+		return setattr(instance, self.name, value)
 
+class WordAccessor(PrivateAccessor):
+	'''A simple proxy between an object and its word.'''
+	def __get__(self, instance, owner):
+		return getattr(instance.word, self.name)
+	def __set__(self, instance, value):
+		return setattr(instance.word, self.name, value)
+		
+class ItemMeta(HandlerMeta):
+	wordAccessors = ('name','definite','indefinite')
+	def __init__(cls, *args, **kwargs):
+		HandlerMeta.__init__(cls, *args, **kwargs)
+		for name in ItemMeta.wordAccessors:
+			if hasattr(cls, name):
+				s = getattr(cls, name)
+				setattr(cls, name, WordAccessor(name))
+				setattr(cls, '_%s' % name, s)
+		
+	def __call__(cls, *args, **kwargs):
+		self = HandlerMeta.__call__(cls, *args, **kwargs)
+		for name in ItemMeta.wordAccessors:
+			n = '_%s' % name 
+			if hasattr(cls, n):
+				setattr(self, name, getattr(cls, n))
+			
+		return self
+
+		
 class Item(Handler):
 	'''Item is the base class for all the items in PyF game world.'''
+	
+	__metaclass__ = ItemMeta
 	
 	EVT_MOVED = 'evtMoved'
 	'''Fired brefore item is moved around in the game world.'''
@@ -90,17 +123,24 @@ class Item(Handler):
 	
 	wordClass = lib.Noun
 	'''The Word class in which the name is instantiated.'''
+
+	needTravel = False
+	'''Used to indicate that the player needs to travel to this in order to interact
+	with its objects.'''
+	locationName = None
+	'''Displayed as the name when traveling to this item.'''
 	
 	listeners = {}
 	
 	def __init__(self):
+		self.word = self.wordClass()
+		self.word.item = self
 		Handler.__init__(self)
 
 		cls = self.__class__
 		cls.inst = self
+		self.game = None
 		
-		if cls.name != None:
-			self.initWord(cls.name)
 		
 		self.props = ()
 		self.inventory = inventory.Inventory()
@@ -132,7 +172,7 @@ class Item(Handler):
 		self.dispatchEvent(self.EVT_INIT)
 		
 	def __eq__(self, other):
-		if type(self) == other:
+		if type(self) is other:
 			return True
 		else:
 			return id(self) == id(other)
@@ -145,31 +185,29 @@ class Item(Handler):
 	@accessible.setter
 	def accessible(self, value):
 		self.available = value
-		
+
 	def accessibleChildren(self):
 		return True
-		for prop in self.props:
-			if not prop.accessibleChildren():
-				return False
-		return True
-			
+		
 	def XMLSetup(self, node):
 		Handler.XMLSetup(self, node)
 		
-		def splitAndClean(s):
-			return tuple([s.strip() for s in s.split(',')])
 
 		if self.name == None:
+			def splitAndClean(s):
+				return tuple([s.strip() for s in s.split(',')])
+				
 			if node.node.hasAttribute('name'):
 				l = splitAndClean(node.node.getAttribute('name'))
-				if node.node.getAttribute('adjective'):
-					self.adjective = splitAndClean(node.node.getAttribute('adjective'))
-				if node.node.hasAttribute('definite'):
-					self.definite = node.node.getAttribute('definite')
-				if node.node.hasAttribute('indefinite'):
-					self.indefinite = node.node.getAttribute('indefinite')
+				self.name = l
+			if node.node.hasAttribute('definite'):
+				self.definite = node.node.getAttribute('definite')
+			if node.node.hasAttribute('indefinite'):
+				self.indefinite = node.node.getAttribute('indefinite')
 				
-				self.initWord(l)
+			if node.node.getAttribute('adjective'):
+				a = splitAndClean(node.node.getAttribute('adjective'))
+				self.adjective = lib.Adjective(a)
 	
 	def XMLWrapup(self, node):
 		Handler.XMLWrapup(self, node)
@@ -181,34 +219,6 @@ class Item(Handler):
 				pass
 		self.finalizeProps()
 		
-	def initWord(self, name):
-		cls = self.__class__
-			
-		name = utils.makeTuple(name)
-		self.word = self.wordClass(name)
-		self.word.item = self
-		
-		if len(self.adjective) != 0:
-			adjective = lib.Adjective(self.adjective)
-			self.word.adjective = adjective
-		
-		self.name = self.word.name
-		
-		if self.definite == None:
-			self.definite = self.word.definite
-		else:
-			self.definite = self.definite
-			self.word.definite = self.definite
-			
-		if self.indefinite == None:
-			self.indefinite = self.word.indefinite
-		else:
-			self.indefinite = self.indefinite
-			self.word.indefinite = self.indefinite
-			
-		if self.word.isPlural:
-			self.pronoun = 'them'
-			
 	def removeWord(self):
 		self.ownerGame.lib.remove(self.word)
 		word = self.word
@@ -225,13 +235,12 @@ class Item(Handler):
 	
 	@property
 	def absLocation(self):
-		if issubclass(type(self.location), Location):
+		if self.location == None:
+			return self
+		elif self.location.needTravel:
 			return self.location
 		else:
-			if self.location != None:
-				return self.location.absLocation
-			else:
-				return None
+			return self.location.absLocation
 			
 		
 	def handleEvents(self, sentence):
@@ -252,10 +261,12 @@ class Item(Handler):
 		try:
 			self.handleEvents(sentence)
 		
-			if self.absLocation != sentence.actor.absLocation:
-				if sentence[:2] == ('*touch', '*self'):
-					sentence.actor.intMove(self.absLocation)
-					output.write(sentence.actor.responses['notNear'] % self.absLocation.name, False)
+			s = self.absLocation
+			if s != sentence.actor.absLocation:
+				if s.needTravel:
+					if sentence[:2] == ('*closeverb', '*self'):
+						sentence.actor.intMove(self.absLocation)
+						output.write(sentence.actor.responses['notNear'] % s.locationName, False)
 					
 			self.handlePrivate(sentence,output)
 
@@ -423,10 +434,22 @@ class ItemMoveEvent(HandlerEvent):
 		HandlerEvent.__init__(self, type, output)
 
 class Male(Item):
+	'''Simple deviation of Item that defines a pronoun and a different word class.'''
+	wordClass = lib.Person
 	pronoun = 'him'
 	
 class Female(Item):
+	'''Simple deviation of Item that defines a pronoun and a different word class.'''
+	wordClass = lib.Person
 	pronoun = "her"
+	
+class Animal(Item):
+	'''Simple deviation of Item that uses a different word class.'''
+	wordClass = lib.Animal
+	
+class Creature(Item):
+	'''Simple deviation of Item that uses a different word class.'''
+	wordClass = lib.Creature
 	
 def _addExit(self, dir, event):
 	self.exits[dir] = event.target
@@ -479,7 +502,7 @@ class Room(Item):
 			
 			for child in f.children:
 				e = child.getValue()
-				if type(e) == handler.HandlerMeta:
+				if type(e) == ItemMeta:
 					if e.inst == None:
 						e.addClassEventListener(e.EVT_INIT, (self, child.node.tagName, _addExit))
 					else:
@@ -561,10 +584,15 @@ class Door(Room):
 				
 class Location(Item):
 	wordClass = lib.Location
+	needTravel = True
 	def XMLWrapup(self, node):
 		Item.XMLWrapup(self, node)
 		for item in self.inventory:
 			item.move(self.owner)
 			item.intMove(self)
+			
+	@property
+	def locationName(self):
+		return self.name
 			
 from actor import *

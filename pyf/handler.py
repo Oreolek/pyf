@@ -20,6 +20,7 @@ import new, responses, copy
 from errors import *
 
 class HandlerMeta(type):
+	'''Metaclass for Handler.'''
 	def __call__(cls, *args, **kwargs):
 		f = type.__call__(cls, *args, **kwargs)
 		f.handlers = HandlerAccess(f)
@@ -48,6 +49,10 @@ class Handler(object):
 		'''Instantiated into a Responses object after object initiation.'''
 		
 	def XMLSetup(self, node):
+		'''Add attr tags into the dictionary and event tags to listeners.
+		
+		@type	node	:	XMLScriptNode'''
+		
 		for child in node.children:
 			if child.node.tagName == 'attr':
 				self.assignFromXMLNode(child)
@@ -58,6 +63,9 @@ class Handler(object):
 		
 		
 	def assignFromXMLNode(self, node):
+		'''Read all node's children into the object dict.
+		
+		@type	node	:	XMLScriptNode'''
 		for n in node.children:
 			if hasattr(self, n.node.nodeName):
 				try:
@@ -68,6 +76,7 @@ class Handler(object):
 				raise ScriptError("%s has no attribute %s" % (self, n.node.nodeName))
 					
 	def XMLWrapup(self, node):
+		'''Called after the XML initiation process is complete.'''
 		pass
 		
 	def write(self, output, name, close=True, obj = None):
@@ -103,11 +112,11 @@ class Handler(object):
 		@type 	output:	Output
 		@param	output:	Output instance to associate with this event.'''
 		
-		if isinstance(event, str):
-			type = event
-			event = HandlerEvent(event, None)
+		if type(event) in (unicode, str):
+			id = event
+			event = HandlerEvent(event, output)
 		else:
-			type = event.type
+			id = event.type
 
 		event.target = self
 		
@@ -118,7 +127,7 @@ class Handler(object):
 				pass
 		
 		try:
-			for f in self.listeners[type]:
+			for f in self.listeners[id]:
 				if f.__class__ in (tuple, list):
 					f[-1](*f[:-1] + (event,))
 				else:
@@ -126,6 +135,9 @@ class Handler(object):
 						event.output.write(f)
 		except KeyError:
 			pass
+			
+		event.done = True
+		return event
 			
 	@classmethod
 	def addClassEventListener(cls, type, function):
@@ -163,26 +175,20 @@ class Handler(object):
 		self.listeners[type].remove(handler)
 	
 	def intHandle(self, sentence, output):
-		'''Default sentence handling process. Should be called only from State.handle.'''
+		'''Default sentence handling process. Should be called from State.handle.'''
 		self.handlePrivate(sentence, output)
 
 	def handlePrivate(self, sentence, output):
 		'''Run output through the default handling process. Shouldn't be called 
-		externally. Default implementation first does class specific handling,
-		second script handling and last default handlers.'''
+		externally.'''
 		self.handle(sentence, output)
-		self.handleScript(sentence, output)
 		self.handlers.handle(sentence, output)
 		
 	def handle(self, sentence, output):
 		pass
 		
-	def handleScript(self, sentence, output):
-		pass
-		
 class HandlerAccess:
 	'''Container for handler functions.'''
-	close = True
 	
 	def __init__(self, parent):
 		self.parent = parent
@@ -197,15 +203,18 @@ class HandlerAccess:
 	def handle(self, sentence, output):
 		for handler in self.handlers:
 			if sentence == handler:
-				output.write(self.handlers[handler], self.close)
+				output.write(self.handlers[handler], True)
 
 	def __setitem__(self, name, value):
 		'''Set new handler.
 		
-		name : str - Compared to sentence.
-		value : callable / function / str - Called with output as the only argument.
-		String is looked up in the item dictionary and called with output as the only 
-		argument.'''
+		@type	name	: str
+		@param	name	: String to compare to sentence during input handling.
+		
+		@type	value	: callable / str
+		@param	value	: If name matches sentence during input handling, callable
+		 				is called with output as the only argument, str written to
+						output, closing it.'''
 		if name not in self.handlers:
 			self.handlers[name] = value
 		else:
@@ -239,9 +248,14 @@ class HandlerAccess:
 		return False
 		
 class HandlerEvent:
+	'''Superclass for any events dispatched during the input handling process.'''
 	def __init__(self, type, output):
 		self.type = type
+		'''ID of the event type.'''
 		self.output = output
+		'''Output object associated with this event.'''
+		self.done = False
+		'''True if event has already been succesfully completed.'''
 
 def validateHandlerFunction(function):
 	'''Make sure handler function can be pickled. Raise HandlerException otherwise.'''

@@ -22,7 +22,7 @@ words = (
 	Verb('go', 'walk'),
 	Verb('enter'),
 	Verb('exit'),
-	Touch('examine', 'x', 'look at', 'l', 'look'),
+	CloseVerb('examine', 'x', 'look at', 'l', 'look'),
 	Move('take', 'get', 'pick up'),
 	Move('drop'),
 	Move('give'),
@@ -33,7 +33,7 @@ words = (
 
 	Verb('set'),
 	Touch('blow'),
-	Verb('burn'),
+	CloseVerb('burn'),
 	Touch('buy', 'purchase'),
 	Touch('climb on', 'climb'),
 	Verb('cut'),
@@ -43,9 +43,6 @@ words = (
 	Touch('sit down on', 'sit down', 'sit'),
 	Touch('lie down on', 'lie down'),
 
-	SocialTouch('kiss'),
-	SocialTouch('hug'),
-	
 	Attack('hit', 'punch'),
 	Attack('kick'),
 	Attack('assault', 'attack'),
@@ -66,9 +63,13 @@ words = (
 	Social('talk to', 'talk', 'speak to', 'speak with', 'speak'),
 	Social('answer', 'reply'),
 	Social('show'),
-
 	Social('ask', 'question'),
 	Social('tell', 'order', 'command'),
+	Social('yell', 'shout', 'scream'),
+
+	SocialTouch('kiss'),
+	SocialTouch('hug'),
+
 	Move('push'),
 	Move('pull'),
 
@@ -84,7 +85,7 @@ words = (
 	Touch('taste'),
 	Touch('turn on', 'switch on'),
 	Touch('turn off', 'switch off'),
-	Move('turn', 'twist', 'move', 'switch'),
+	Move('turn', 'twist', 'move', 'switch', 'rotate'),
 	Touch('touch', 'rub', 'feel'),
 	Touch('wake', 'wake up'),
 
@@ -116,6 +117,7 @@ words = (
 	Preposition('to'),
 	Preposition('through'),
 	Preposition('beside'),
+	Preposition('from', 'out of'),
 
 	Internal('again', 'g'),
 	Internal('save'),

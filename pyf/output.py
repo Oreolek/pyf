@@ -16,7 +16,8 @@ You should have received a copy of the GNU General Public License
 along with PyF.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import types, utils
+import utils
+import inspect
 from errors import *
 
 class Output:
@@ -54,9 +55,9 @@ class Output:
 		if self.closed:
 			self.done()
 		else:
-			if type(s) == types.FunctionType:
+			try:
 				s = s()
-			if type(s) == str or type(s) == unicode:
+			except TypeError:
 				s = [s]
 			
 			for line in s:
@@ -69,14 +70,14 @@ class Output:
 		if close:
 			self.close()
 			
-	def eval(self, s, separators, obj=None):
+	def eval(self, s, separators, context=None):
 		'''Run through string s evaluating any code contained in separators.
 		
 		@type	s:			str
 		@param	s:			String to search. Text between separators is evaluated.
 		
-		@type	obj:		Item / None
-		@param	obj:		Item to set as self for code between separators.
+		@type	context:	Item / None
+		@param	context:	Item to set as self in code.
 		
 		@type	separators:	tuple
 		@param	separators:	2-item tuple containing separators to use for separating
@@ -100,11 +101,11 @@ class Output:
 			items = [word.item for word in self.sentence.nouns]
 			sentence = self.sentence
 			actor = self.sentence.actor
-			if not obj:
+			if not context:
 				try:
-					obj = items[0]
+					context = items[0]
 				except IndexError:
-					obj = None
+					context = None
 			
 		out = ''
 		codeBuffer = ''
@@ -120,10 +121,24 @@ class Output:
 				count -= 1
 				if count == 0:
 					try:
-						out += eval(codeBuffer, {'self': obj, 'nouns':nouns, 'items':items, 'verbs':verbs, 'sentence':sentence, 'actor':actor, 'utils':utils})
+						loc = {'self': context, 
+							'nouns':nouns, 
+							'items':items, 
+							'verbs':verbs, 
+							'sentence':sentence, 
+							'actor':actor, 
+							'utils':utils
+						}
+						glob = inspect.getmodule(context).__dict__
+						code = self.cleanCode(codeBuffer)
+						out += eval(code, glob, loc)
+						codeBuffer = ''
 					except Exception, e:
-						raise InlineCodeError('Error in inline code: [%s] in \n %s \n' % (codeBuffer, s) + str(e))
-					codeBuffer = ''
+						s = "Error in inline code: [%s]" % codeBuffer
+						s += '\nin inline script:'
+						s += '\n%s' % codeBuffer
+						print s
+						raise e
 					continue
 				
 
@@ -189,6 +204,14 @@ class Output:
 			raise OutputError("Output unavailable")
 		else:
 			return cls.i
+			
+	@classmethod
+	def cleanCode(cls, s):
+		s = s.replace('\t', ' ')
+		s = s.replace('\n', ' ')
+		while '  ' in s:
+			s = s.replace('  ', ' ')
+		return s
 		
 def cleanInput(s):
 	pass
