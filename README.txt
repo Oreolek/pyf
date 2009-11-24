@@ -47,5 +47,5 @@ python setup.py install
 ============================ DOCUMENTATION ==========================
 =====================================================================
 
-You can run genDocs to generate the documentation for this version of
+You can run GEN_DOCS to generate the documentation for this version of
 PyF with Epydoc.
