@@ -50,7 +50,8 @@ class Normal(Property):
 		self.dispatchEvent(self.EVT_EXAMINED)
 		
 	def init(self):
-		pass
+		if self.inv == None:
+			self.inv = self.owner.indefinite
 		
 	def removeShortDesc(self, s):
 		return s.remove(self.descToken(), '')

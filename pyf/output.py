@@ -129,7 +129,12 @@ class Output:
 							'actor':actor, 
 							'utils':utils
 						}
-						glob = inspect.getmodule(context).__dict__
+						try:
+							# try to get item context
+							glob = inspect.getmodule(context).__dict__
+						except AttributeError:
+							glob = {}
+							
 						code = self.cleanCode(codeBuffer)
 						out += eval(code, glob, loc)
 						codeBuffer = ''

@@ -4,8 +4,6 @@ from pyf import items, game
 
 class Game(game.Game):
 	'''First we subclass the Game object to create our own game.'''
-	script = open('cod.script.xml')
-	'''Script is defined as a file-like object.'''
 	
 	def ending(self, output):
 		'''Called after game.end() is called.'''
@@ -14,8 +12,6 @@ class Game(game.Game):
 			output.write("*** You have lost ***")
 		else:
 			output.write("*** You have won ***")
-			
-game = Game()
 
 class Player(items.Actor):
 	pass
@@ -69,10 +65,10 @@ class Cloak(items.Item):
 		self.addEventListener(self.EVT_MOVED, (self, cloakMoved))
 
 '''Create the game world based on our script.'''
-game.initFromScript(locals())
+game = game.createFromScript(open('cod.script.xml'), locals())
 
-'''Set Player object as the actor.'''
-game.setActor(Player.inst)
+'''Set Player instace as the actor.'''
+game.actor = Player.inst
 
 if __name__ == '__main__':
 	'''Finally we need an interface so that you can actually play the game. '''

@@ -210,6 +210,9 @@ class Game(Handler):
 		item.updateAccessInfo(self)
 		item.init()
 		
+	def move(self, other):
+		pass
+		
 	def addItems(self, *items):
 		'''Add items to the game world.
 		
@@ -232,14 +235,12 @@ class Game(Handler):
 		item.game = None
 			
 	def initFromScript(self, dict):
-		'''Init this game from current script.
+		'''DEPRECATED - use script.getGameFromScript instead.
+		Init this game from current script.
 		
 		dict - Dict mapping node names to classes.'''
 		self.script = script.XMLScript(self.script, dict)
 		
-		for child in self.script.createChildren(None):
-			if issubclass(type(child), items.Item):
-				self.addItem(child)
 			
 	def pickle(self):
 		'''Pickle the current game state and write it into self.savefile. You can
@@ -280,3 +281,21 @@ class GameEvent(HandlerEvent):
 	def __init__(self, type):
 		HandlerEvent.__init__(self, type, None)
 		self.type = type
+		
+def createFromScript(file, context):
+	'''
+	@type	file:		file-like object
+	@param	file:		A file-like object containing the script.
+	@type	context:	dict
+	@param	dict:		A dict defining what context to execute the script in.'''
+	
+	s = file.read()
+	scr = script.XMLScript(s, context)
+	
+	game = scr.create()
+	
+	for child in scr.createChildren(None):
+		if issubclass(type(child), items.Item):
+			game.addItem(child)
+			
+	return game

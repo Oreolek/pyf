@@ -2,28 +2,28 @@
 <!-- cod.script.xml -->
 <!-- Script is used to define the actual form of the game world, how objects
 are placed throughout it, and their text content. -->
-<script xmlns:props="pyf.props">
+<Game xmlns:props="pyf.props">
 	<!-- Import module pyf.props as an XML namespace. -->
-	<game>
-		<!-- game is our Game object instantiated in the source -->
-		<attr>
-			<!-- Tags inside <attr> are assigned to the object dict after 
-			instantiation. That means after our script is read game.name is 
-			"Cloak of Darkness" and game.author is "Roger Firth" and so on. -->
-			<name>Cloak of Darkness</name>
-			<author>Roger Firth</author>
-			<version>1.0</version>
-			<description>Hurrying through the rainswept November night, you're glad to 
-				see the bright lights of the Opera House. It's surprising that there 
-				aren't more people about but, hey, what do you expect in a 
-				cheap demo game...?</description>
-				
-		</attr>
-	</game>
+	<attr>
+		<!-- Tags inside <attr> are assigned to the object dict after 
+		instantiation. That means after our script is read Game.name is 
+		"Cloak of Darkness" and Game.author is "Roger Firth" and so on. -->
+		<name>Cloak of Darkness</name>
+		<author>Roger Firth</author>
+		<version>1.0</version>
+		<description>Hurrying through the rainswept November night, you're glad to 
+			see the bright lights of the Opera House. It's surprising that there 
+			aren't more people about but, hey, what do you expect in a 
+			cheap demo game...?</description>
+	</attr>
 	
-	<Foyer name="Foyer of the Opera House">
+	<Foyer name="Foyer of the Opera House"
+		ldesc="You are standing in a spacious hall, splendidly decorated in red 
+		and gold, with glittering chandeliers overhead. The entrance from 
+		the street is to the north, and there are doorways south and west.">
 		<!-- Foyer is a class defined in the source - here we instantiate it with the name
-		"Foyer of the Opera House". -->
+		"Foyer of the Opera House". ldesc is automatically turned into the item's 
+		long description.-->
 		
 		<exits>
 			<west><Cloakroom /></west>
@@ -33,22 +33,16 @@ are placed throughout it, and their text content. -->
 			outside seems to be getting worse.</north>
 		</exits>
 
-		<!-- ldesc is automatically turned into the item's long description. -->
-		<ldesc>You are standing in a spacious hall, splendidly decorated in red 
-		and gold, with glittering chandeliers overhead. The entrance from 
-		the street is to the north, and there are doorways south and west.</ldesc>
-		
-		<Player>
+		<Player
+			ldesc="As handsome as ever.">
 			<!-- Player class defined in the source. Any class node that's contained in
 			another class node is automatically moved to the containing object. So after
 			this is read, Player is moved to its starting place in Foyer. -->
 			
-			<ldesc>As handsome as ever.</ldesc>
-			
-			<Cloak name="cloak" adjective="handsome, velvet, dark, black, velvet, satin">
-				<ldesc>A handsome cloak, of velvet trimmed with satin, and slightly 
+			<Cloak name="cloak" adjective="handsome, velvet, dark, black, velvet, satin"
+				ldsec="A handsome cloak, of velvet trimmed with satin, and slightly 
 				spattered with raindrops. Its blackness is so deep that it almost 
-				seems to suck light from the room.</ldesc>
+				seems to suck light from the room.">
 				
 				<!-- Mobile is a property class residing in pyf.props. Here the property
 				is instantiated and moved to the cloak object. This allows the player
@@ -77,11 +71,10 @@ are placed throughout it, and their text content. -->
 
 	</Foyer>
 	
-	<Cloakroom name="Cloakroom">
-		
-		<ldesc>The walls of this small room were clearly once lined with hooks, 
-		though now only one remains. The exit is a door to the east.</ldesc>
-		
+	<Cloakroom name="Cloakroom"
+		ldesc="The walls of this small room were clearly once lined with hooks, 
+			though now only one remains. The exit is a door to the east.">
+
 		<exits>
 			<east><Foyer /></east>
 		</exits>
@@ -89,8 +82,8 @@ are placed throughout it, and their text content. -->
 		<!-- Automatically lists undescribed things in the room. We add it here since
 		it's possible to drop the cloak on the floor. -->
 		
-		<Hook name="hook, peg" adjective="brass, small">
-			<ldesc>It's just a small brass hook.</ldesc>
+		<Hook name="hook, peg" adjective="brass, small"
+			ldesc="It's just a small brass hook.">
 			
 			<!-- Allow putting things on the hook. -->
 			<props:Surface />
@@ -98,15 +91,15 @@ are placed throughout it, and their text content. -->
 		
 	</Cloakroom>
 	
-	<Bar name="Foyer bar">
+	<Bar name="Foyer bar"
+		ldesc="The bar, much rougher than you'd have guessed after the opulence of the 
+		foyer to the north, is completely empty. There seems to be some sort of message 
+		scrawled in the sawdust on the floor.">
+		
 		<exits>
 			<north><Foyer /></north>
 		</exits>
 
-		<ldesc>The bar, much rougher than you'd have guessed after the opulence of the 
-		foyer to the north, is completely empty. There seems to be some sort of message 
-		scrawled in the sawdust on the floor.</ldesc>
-		
 		<props:Dark>
 			<!-- The room is lit by default, taking the cloak into the room 
 			makes it dark. -->
@@ -117,4 +110,4 @@ are placed throughout it, and their text content. -->
 		
 		<Message name="message, sawdust"/>
 	</Bar>
-</script>
+</Game>

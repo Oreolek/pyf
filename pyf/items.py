@@ -212,11 +212,17 @@ class Item(Handler):
 	def XMLWrapup(self, node):
 		Handler.XMLWrapup(self, node)
 		if not props.Normal in self.props:
-			try:
-				f = node.getChild('ldesc')
-				self.addProp(props.Normal(long=f.getValue()))
-			except ScriptChildError:
-				pass
+			s = None
+			if node.node.hasAttribute('ldesc'):
+				s = node.node.getAttribute('ldesc')
+			else:
+				try:
+					s = node.getChild('ldesc').getValue()
+				except ScriptChildError:
+					pass
+			if s:
+				self.addProp(props.Normal(long=s))
+				
 		self.finalizeProps()
 		
 	def removeWord(self):
