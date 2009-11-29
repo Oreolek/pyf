@@ -101,10 +101,11 @@ class Output:
 			sentence = self.sentence
 			actor = self.sentence.actor
 			if not context:
-				try:
-					context = nouns[0].item
-				except IndexError:
-					context = None
+				context = None
+				for word in sentence:
+					if word == '*self':
+						context = word.item
+						break
 			
 		out = ''
 		codeBuffer = ''
