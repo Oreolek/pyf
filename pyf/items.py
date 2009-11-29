@@ -126,7 +126,7 @@ class Item(Handler):
 
 	needTravel = False
 	'''Used to indicate that the player needs to travel to this in order to interact
-	with its objects.'''
+	with its items.'''
 	locationName = None
 	'''Displayed as the name when traveling to this item.'''
 	
@@ -140,7 +140,6 @@ class Item(Handler):
 		cls = self.__class__
 		cls.inst = self
 		self.game = None
-		
 		
 		self.props = ()
 		self.inventory = inventory.Inventory()
@@ -312,7 +311,7 @@ class Item(Handler):
 			if prop.name == name:
 				return prop
 		
-		raise PropError("Item %s has no property %s." % (self.name, name))
+		raise PropError("Item %s has no property %s." % (self, name))
 		
 	def hasProp(self, name):
 		for prop in self.props:

@@ -48,7 +48,14 @@ class State:
 class Running(State):
 	timedEvents = []
 	
+	def addTimedEvent(self, event):
+		self.timedEvents.append(event)
+	
 	def handle(self, sentence, output):
+		if sentence == 'again':
+			sentence.words = self.lastSentence.words
+		self.lastSentence = sentence
+		
 		try:
 			actor = self.actor
 			actor.intHandle(sentence, output)
@@ -97,13 +104,13 @@ class Disambiguation(State):
 	def handle(self, sentence, output):
 		found = None
 		for match in self.words:
-			word = match.word
+			word = match.wordObject
 			if word == sentence.s:
 				found = match
 				
 		if found:
 			self.resumeMatching(match)
-			output.write('(%s)' % word.name, False)
+			output.write('(%s)' % word.definite, False)
 			self.oldState.handle(self.sentence, output)
 		else:
 			self.oldState.handle(sentence, output)
@@ -113,15 +120,15 @@ class Disambiguation(State):
 	def tryResolve(self):
 		l = []
 		for match in self.words:
-			if type(match.word) == lib.Noun:
-				if match.word in self.sentence.actor.pronouns.values():
-					if self.sentence.actor.canAccess(match.word.item):
+			if type(match.wordObject) == lib.Noun:
+				if match.wordObject in self.sentence.actor.pronouns.values():
+					if self.sentence.actor.canAccess(match.wordObject.item):
 						l = [match]
 						break
-				elif self.actor.canAccess(match.word.item):
+				elif self.actor.canAccess(match.wordObject.item):
 					l.append(match)
 			else:
-				raise DisambiguationError("Can't resolve %s - only nouns can be ambiguous." % str(match.word))
+				raise DisambiguationError("Can't resolve %s - only nouns can be ambiguous." % str(match.wordObject))
 				
 		self.words = l
 		return self.resolved()
@@ -169,6 +176,7 @@ class Talking(State):
 		else:
 			try:
 				self.npc.converseAbout(sentence, output)
+				output.write(self.npc.responses[self.npc.UNKNOWN_TOPIC])
 			except OutputClosed:
 				pass
 		
@@ -190,3 +198,4 @@ class Question(State):
 			self.restoreState()
 		finally:
 			output.write(self.responses[self.INVALID_ANSWER])
+			

@@ -40,7 +40,7 @@ are placed throughout it, and their text content. -->
 			this is read, Player is moved to its starting place in Foyer. -->
 			
 			<Cloak name="cloak" adjective="handsome, velvet, dark, black, velvet, satin"
-				ldsec="A handsome cloak, of velvet trimmed with satin, and slightly 
+				ldesc="A handsome cloak, of velvet trimmed with satin, and slightly 
 				spattered with raindrops. Its blackness is so deep that it almost 
 				seems to suck light from the room.">
 				

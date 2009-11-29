@@ -28,6 +28,9 @@ class NPC(Property):
 	'''Fired every time the player ends a conversation with NPC. Not fired when answering
 	questions outside a conversation.'''
 	
+	conversationState = states.Talking
+	'''State to use for conversation.'''
+	
 	CONVERSATION_STARTED = 'conversationStarted'
 	CONVERSATION_ENDED = "conversationEnded"
 	
@@ -89,26 +92,26 @@ class NPC(Property):
 	def askAbout(self, sentence, output):
 		s = self.answerFromDict(sentence, self.answers)
 		if s:
-			output.write(s)
+			output.write(s, obj=self.owner)
 
 	def tellAbout(self, sentence, output):
 		s = self.answerFromDict(sentence, self.topics)
 		if s:
-			output.write(s)
+			output.write(s, obj=self.owner)
 				
 	def orderTo(self, sentence, output):
 		s = self.answerFromDict(sentence, self.orders)
 		if s:
-			output.write(s)
+			output.write(s, obj=self.owner)
 		
 	def converseAbout(self, sentence, output):
 		self.askAbout(sentence, output)
 		self.tellAbout(sentence, output)
-		output.write(self.responses[self.UNKNOWN_TOPIC])
 
 	def initConversation(self):
 		self.dispatchEvent(NPC.EVT_CONVERSATION_STARTED)
-		self.ownerGame.actor.state = states.Talking(self.ownerGame.actor, self)
+		self.ownerGame.actor.state = self.conversationState(self.ownerGame.actor, self)
 		
 	def endConversation(self):
 		self.dispatchEvent(NPC.EVT_CONVERSATION_ENDED)
+		

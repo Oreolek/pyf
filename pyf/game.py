@@ -35,6 +35,9 @@ class Game(Handler):
 	'''Author name.'''
 	IFID = ''
 	
+	undoEnabled = True
+	'''True if player can use type "undo" to take back the last turn.'''
+	
 	savefile = 'default.save'
 	'''Default file to use for saving and loading game.'''
 	
@@ -65,12 +68,19 @@ class Game(Handler):
 		self.actor = None
 		'''Default actor to pass input to.'''
 		
+		if self.undoEnabled:
+			self.logger = Logger()
+		
 		if self.script != None:
 			s = self.script.read()
 			self.script.close()
 			self.script = s
 			
 		self.scoreList = {}
+	
+	def log(self, o, name):
+		if hasattr(self, 'logger'):
+			self.logger.log(o, name)
 	
 	@property
 	def ownerGame(self):
@@ -149,8 +159,20 @@ class Game(Handler):
 			o.write('Debugger closed', False)
 			return o
 			
-		s = lib.Sentence(s.encode())
-		self.actor.input(s, o)
+		sentence = lib.Sentence(s)
+
+		if self.undoEnabled:
+			if s == 'undo':
+				try:
+					self.logger.rollBack()
+					o.write('Done.', False)
+				except IndexError:
+					o.write("There's nothing to undo.", False)
+				return o
+			else:
+				self.logger.newFrame()
+			
+		self.actor.input(sentence, o)
 		
 		if self.transcribe:
 			if not hasattr(self, 'transcription'):
@@ -207,6 +229,7 @@ class Game(Handler):
 		item : Item subclass'''
 		self.inventory.append(item)
 		self.lib.append(item.word)
+		item.inventory.ownerGame = self
 		item.updateAccessInfo(self)
 		item.init()
 		
@@ -235,7 +258,7 @@ class Game(Handler):
 		item.game = None
 			
 	def initFromScript(self, dict):
-		'''DEPRECATED - use script.getGameFromScript instead.
+		'''DEPRECATED - use createFromScript instead.
 		Init this game from current script.
 		
 		dict - Dict mapping node names to classes.'''
@@ -299,3 +322,44 @@ def createFromScript(file, context):
 			game.addItem(child)
 			
 	return game
+	
+class Logger(object):
+	'''Class for logging changes in the game world.'''
+	
+	DELETE = 'deleteIfDoesntExist'
+	'''A flag indicating that the attribute should be deleted for this frame.'''
+	queueLength = 20
+	def __init__(self):
+		self.l = []
+		
+	def newFrame(self):
+		self.l.append({})
+		if len(self.l) > self.queueLength:
+			del self.l[0]
+		
+	@property
+	def frame(self):
+		return self.l[-1]
+		
+	def log(self, o, name):
+		try:
+			f = self.frame
+			if o not in f:
+				f[o] = {}
+			
+			e = getattr(o, name, self.DELETE)
+			if type(e) == dict:
+				e = dict.copy()
+			elif type(e) == list:
+				e = e[:]
+			f[o][name] = e
+		except IndexError:
+			pass
+			
+	def rollBack(self):
+		f = self.l.pop()
+		for item in f:
+			item.__dict__.update(f[item])
+			for fo in item.__dict__.keys():
+				if item.__dict__[fo] == self.DELETE:
+					del item.__dict__[fo]

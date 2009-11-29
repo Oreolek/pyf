@@ -88,10 +88,9 @@ class Property(handler.Handler):
 		
 	@property
 	def ownerGame(self):
-		'''Returns the game of the Item this property belongs to.'''
-		if self.owner == None:
-			raise PropError("Property %s's owner is set to None" % self.__class__.__name__)
-		return self.owner.game
+		if getattr(self, 'owner', None) is None:
+			raise GameError("Property %s's owner is set to None" % self.__class__.__name__)
+		return self.owner.ownerGame
 		
 	def handleScript(self, sentence, output):
 		pass

@@ -90,20 +90,19 @@ class Output:
 							defined in.'''
 							
 		nouns = None
-		items = None
 		verbs = None
 		sentence = None
 		actor = None
 		
 		if not self.sentence is None:
+			# some convenience variables
 			nouns = self.sentence.nouns
 			verbs = self.sentence.verbs
-			items = [word.item for word in self.sentence.nouns]
 			sentence = self.sentence
 			actor = self.sentence.actor
 			if not context:
 				try:
-					context = items[0]
+					context = nouns[0].item
 				except IndexError:
 					context = None
 			
@@ -111,32 +110,34 @@ class Output:
 		codeBuffer = ''
 		
 		count = 0
+		stringOpen = False
 		for char in s:
-			if char == separators[0]:
+			if count > 0 and char in ('"', "'"):
+				stringOpen = stringOpen == False
+
+			if char == separators[0] and not stringOpen:
 				count += 1
 				if count == 1:
 					continue
-
-			elif char == separators[1]:
+					
+			elif char == separators[1] and not stringOpen:
 				count -= 1
 				if count == 0:
 					try:
 						loc = {'self': context, 
 							'nouns':nouns, 
-							'items':items, 
 							'verbs':verbs, 
 							'sentence':sentence, 
 							'actor':actor, 
-							'utils':utils
+							'utils':utils,
 						}
 						try:
-							# try to get item context
-							glob = inspect.getmodule(context).__dict__
+							loc['module'] = inspect.getmodule(context)
 						except AttributeError:
-							glob = {}
+							pass
 							
 						code = self.cleanCode(codeBuffer)
-						out += eval(code, glob, loc)
+						out += eval(code, loc)
 						codeBuffer = ''
 					except Exception, e:
 						s = "Error in inline code: [%s]" % codeBuffer

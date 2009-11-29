@@ -39,19 +39,19 @@ class Normal(Property):
 		'''A dict containing specific descriptions for the object if contained in another
 		object. Key is the container object name, and value the description.'''
 		
+	def init(self):
+		if not self.inv:
+			self.inv = self.owner.indefinite
+		
 	def handle(self, sentence, output):
 		if sentence == ('examine', '*self'):
 			self.examine(output)
 		
 	def examine(self, output):
-		output.write(self.getLong())
+		output.write(self.getLong(), obj=self.owner)
 		
 	def doExamine(self):
 		self.dispatchEvent(self.EVT_EXAMINED)
-		
-	def init(self):
-		if self.inv == None:
-			self.inv = self.owner.indefinite
 		
 	def removeShortDesc(self, s):
 		return s.remove(self.descToken(), '')
@@ -103,12 +103,6 @@ class Normal(Property):
 		
 	def __nonzero__(self):
 		return True
-		
-	def shortest(self):
-		if self.inv != None:
-			return self.inv
-		else:
-			return self.owner.name
 			
 class DescFormatter(string.Formatter):
 	def get_value(self, key, args, kwargs):
@@ -190,9 +184,9 @@ class Mobile(Property):
 				if self.owner.owner != output.actor:
 					if self.owner.location != location:
 						self.doPush(location)
-						output.write(self.responses[self.PUSHED])
+						output.write(self.responses[self.PUSHED], obj=self.owner)
 					else:
-						output.write(self.responses[self.ALREADY_PUSHED])
+						output.write(self.responses[self.ALREADY_PUSHED], obj=self.owner)
 		else:
 			self.write(self.NOT_MOVABLE)
 				
@@ -240,9 +234,9 @@ def _opened(self, event):
 	if self.locked:
 		if self.keyAvailable():
 			self.doUnlock()
-			event.output.write(self.responses[self.UNLOCKED_INLINE], False, obj = self)
+			event.output.write(self.responses[self.UNLOCKED_INLINE], False, obj = self.owner)
 		else:
-			event.output.write(self.responses[self.NO_KEY], obj = self)
+			event.output.write(self.responses[self.NO_KEY], obj = self.owner)
 
 class Openable(Property):
 	'''Defines something that can be closed and opened.'''
@@ -377,7 +371,7 @@ class Openable(Property):
 					s = self.owner.Normal.fillDescription(s, self.owner)
 					out += ' ' + s
 				
-			output.write(out)
+			output.write(out, obj=self.owner)
 		
 		else:
 			self.write(output, self.ALREADY_OPEN)

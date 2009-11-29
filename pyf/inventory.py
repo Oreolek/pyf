@@ -42,13 +42,23 @@ class Inventory:
 			
 	def remove(self, item):
 		'''Remove item from item list.'''
+		self.log()
 		self.list.remove(item)
+		
+	def log(self):
+		try:
+			self.ownerGame.logger.log(self, 'list')
+		except GameError:
+			pass
+		except AttributeError:
+			pass
 		
 	def append(self, item):
 		'''Add item to inventory list. Raises InventoryError if item is already in 
 		list.'''
 		if item in self.list:
 			raise InventoryError("Item %s already found in inventory." % str(item.name))
+		self.log()
 		self.list.append(item)
 
 	def __contains__(self, other):

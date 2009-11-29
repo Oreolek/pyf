@@ -120,6 +120,7 @@ words = (
 	Preposition('from', 'out of'),
 
 	Internal('again', 'g'),
+	Internal('undo'),
 	Internal('save'),
 	Internal('load'),
 	Internal('help'),

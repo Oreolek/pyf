@@ -21,7 +21,7 @@ from .. props import Property, SwitchEvent
 def _seatMoved(self, event):
 	if self.canStand:
 		self.doStand()
-		event.output.write(self.responses['itemMoved'], False)
+		event.output.write(self.responses['itemMoved'], False, obj=self.owner)
 	else:
 		self.cantStand(event.output)
 
@@ -144,7 +144,7 @@ class Seat(Property):
 			self.cantStand(output)
 		
 	def cantStand(self, output):
-		output.write(self.responses[self.CANT_STAND])
+		output.write(self.responses[self.CANT_STAND], obj=self.owner)
 
 
 		

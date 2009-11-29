@@ -566,6 +566,7 @@ class Match(object):
 		self.s = word
 		self.x = index
 		self.wordObject = wordObject
+		self.word = wordObject
 		self.length = len(word)
 		self.y = self.x + self.length
 		

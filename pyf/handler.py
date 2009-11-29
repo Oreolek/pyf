@@ -61,6 +61,9 @@ class Handler(object):
 		self.handlers.XMLSetup(node)
 		self.responses.XMLSetup(node)
 		
+	def __setattr__(self, name, value):
+		log(self, name)
+		object.__setattr__(self, name, value)
 		
 	def assignFromXMLNode(self, node):
 		'''Read all node's children into the object dict.
@@ -144,7 +147,7 @@ class Handler(object):
 		if type not in cls.listeners:
 			cls.listeners[type] = []
 		cls.listeners[type].insert(0, function)
-
+		
 	def addEventListener(self, type, handler):
 		'''Add event listener.
 		
@@ -161,7 +164,7 @@ class Handler(object):
 			self.listeners[type] = []
 			
 		l = self.listeners[type]
-			
+		log(self, 'listeners')
 		l.insert(0, handler)
 		
 	def removeEventListener(self, type, handler):
@@ -172,6 +175,7 @@ class Handler(object):
 		
 		@type	handler:	tuple
 		@param	handler:	The same tuple that was used to add the event listener.'''
+		log(self, 'listeners')
 		self.listeners[type].remove(handler)
 	
 	def intHandle(self, sentence, output):
@@ -185,6 +189,12 @@ class Handler(object):
 		self.handlers.handle(sentence, output)
 		
 	def handle(self, sentence, output):
+		pass
+		
+def log(self, name):
+	try:
+		self.ownerGame.log(self, name)
+	except GameError:
 		pass
 		
 class HandlerAccess:
@@ -216,6 +226,7 @@ class HandlerAccess:
 		 				is called with output as the only argument, str written to
 						output, closing it.'''
 		if name not in self.handlers:
+			log(self, 'handlers')
 			self.handlers[name] = value
 		else:
 			raise HandlerException("Handler for input '%s' already exists" % name)
@@ -233,6 +244,7 @@ class HandlerAccess:
 		'''Delete handler.
 		
 		name : str'''
+		log(self, 'handlers')
 		self.handlers.__delitem__(name)
 			
 	def __iter__(self):

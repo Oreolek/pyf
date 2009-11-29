@@ -112,7 +112,7 @@ class Actor(Item):
 			self.state = state
 
 			if state.tryResolve():
-				output.write("(%s)" % state.words[0].word.name, False)
+				output.write("(%s)" % state.words[0].wordObject.definite, False)
 				state.resumeMatching(state.words[0])
 				sentence = state.sentence
 			else:
